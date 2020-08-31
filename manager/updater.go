@@ -13,7 +13,7 @@ import (
 
 	"github.com/unly/wow-addon-updater/config"
 	"github.com/unly/wow-addon-updater/manager/sources"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 const versionFile string = ".versions"

@@ -1,9 +1,8 @@
 module github.com/unly/wow-addon-updater
 
-go 1.13
+go 1.15
 
 require (
-	github.com/google/go-github v17.0.0+incompatible
-	github.com/google/go-github/v31 v31.0.0
-	gopkg.in/yaml.v2 v2.3.0
+	github.com/google/go-github/v32 v32.1.0
+	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
 )

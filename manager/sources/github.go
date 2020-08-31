@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/google/go-github/github"
+	"github.com/google/go-github/v32/github"
 )
 
 var regex = regexp.MustCompile(`https://github.com/([a-zA-Z0-9]|-)+/([a-zA-Z0-9]|-)+`)
