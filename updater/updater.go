@@ -1,4 +1,4 @@
-package manager
+package updater
 
 import (
 	"archive/zip"
@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/unly/wow-addon-updater/config"
-	"github.com/unly/wow-addon-updater/manager/sources"
+	"github.com/unly/wow-addon-updater/updater/sources"
 	"gopkg.in/yaml.v3"
 )
 
