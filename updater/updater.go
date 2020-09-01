@@ -1,33 +1,41 @@
 package updater
 
 import (
-	"archive/zip"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 	"os"
-	"path/filepath"
 	"regexp"
-	"strings"
 
 	"github.com/unly/wow-addon-updater/config"
 	"github.com/unly/wow-addon-updater/updater/sources"
+	"github.com/unly/wow-addon-updater/util"
 	"gopkg.in/yaml.v3"
 )
 
-const versionFile string = ".versions"
+const (
+	versionFile string      = ".versions"
+	fileMod     os.FileMode = os.FileMode(0666)
+)
 
-type updater struct {
+var addonSources []UpdateSource = []UpdateSource{
+	sources.NewGitHubSource(),
+}
+
+type Updater struct {
+	classic gameUpdater
+	retail  gameUpdater
+}
+
+type gameUpdater struct {
 	config   config.WowConfig
 	versions map[string]string
-	sources  []UpdateSource
 }
 
 type UpdateSource interface {
 	GetURLRegex() *regexp.Regexp
 	GetLatestVersion(addon string) (string, error)
-	DownloadAddon(addon string) (string, error)
+	DownloadAddon(addon, dir string) error
 }
 
 type Addon struct {
@@ -35,72 +43,48 @@ type Addon struct {
 	Version string `yaml:"version"`
 }
 
-type AddonVersions struct {
-	Addons []Addon `yaml:"addons"`
+type Versions struct {
+	Classic []Addon `yaml:"classic"`
+	Retail  []Addon `yaml:"retail"`
 }
 
-func NewUpdater(config config.WowConfig) (*updater, error) {
-	sources := []UpdateSource{
-		sources.NewGitHubSource(),
-	}
-
+func NewUpdater(config config.Config) (*Updater, error) {
 	readVersions, err := readVersionsFile(versionFile)
 	if err != nil {
 		return nil, err
 	}
 
-	versions := make(map[string]string, len(readVersions.Addons))
-	for _, addon := range readVersions.Addons {
-		versions[addon.Name] = addon.Version
-	}
-
-	return &updater{
-		config:   config,
-		versions: versions,
-		sources:  sources,
+	return &Updater{
+		classic: gameUpdater{
+			config:   config.Classic,
+			versions: mapAddonVersions(readVersions.Classic),
+		},
+		retail: gameUpdater{
+			config:   config.Retail,
+			versions: mapAddonVersions(readVersions.Retail),
+		},
 	}, nil
 }
 
-func (u *updater) getCurrentVersion(addon string) (string, error) {
-	version, _ := u.versions[addon]
-	return version, nil
-}
-
-func (u *updater) setCurrentVersion(addon, version string) {
-	u.versions[addon] = version
-}
-
-func (u *updater) saveVersionsFile() error {
-	addons := make([]Addon, len(u.versions))
-	i := 0
-
-	for addon, version := range u.versions {
-		addons[i] = Addon{
-			Name:    addon,
-			Version: version,
+func (u *Updater) UpdateAddons() error {
+	defer func() {
+		if err := saveVersionsFile(u, versionFile, fileMod); err != nil {
+			log.Panicf("failed to write versions file: %v", err)
 		}
-		i++
-	}
+	}()
 
-	addonVersions := AddonVersions{
-		Addons: addons,
-	}
-
-	out, err := yaml.Marshal(addonVersions)
+	err := u.retail.updateAddons()
 	if err != nil {
 		return err
 	}
-
-	err = ioutil.WriteFile(versionFile, out, os.FileMode(0666))
+	err = u.classic.updateAddons()
 
 	return err
 }
 
-func (u *updater) UpdateAddons() error {
-	defer u.saveVersionsFile()
-
+func (u *gameUpdater) updateAddons() error {
 	for _, addon := range u.config.AddOns {
-		source, err := u.getSource(addon)
+		source, err := getSource(addon)
 		if err != nil {
 			return err
 		}
@@ -114,23 +98,19 @@ func (u *updater) UpdateAddons() error {
 	return nil
 }
 
-func (u *updater) getSource(addon string) (UpdateSource, error) {
-	for _, source := range u.sources {
-		if source.GetURLRegex().Match([]byte(addon)) {
-			return source, nil
-		}
-	}
-
-	return nil, fmt.Errorf("addon url: %s is not supported", addon)
+func (u *gameUpdater) getCurrentVersion(addon string) string {
+	version, _ := u.versions[addon]
+	return version
 }
 
-func (u *updater) updateAddon(addon string, source UpdateSource) error {
+func (u *gameUpdater) setCurrentVersion(addon, version string) {
+	u.versions[addon] = version
+}
+
+func (u *gameUpdater) updateAddon(addon string, source UpdateSource) error {
 	log.Printf("updating addon: %s\n", addon)
 
-	currentVersion, err := u.getCurrentVersion(addon)
-	if err != nil {
-		return err
-	}
+	currentVersion := u.getCurrentVersion(addon)
 
 	latestVersion, err := source.GetLatestVersion(addon)
 	if err != nil {
@@ -142,12 +122,7 @@ func (u *updater) updateAddon(addon string, source UpdateSource) error {
 		return nil
 	}
 
-	path, err := source.DownloadAddon(addon)
-	if err != nil {
-		return err
-	}
-
-	_, err = unzip(path, u.config.Path)
+	err = source.DownloadAddon(addon, u.config.Path)
 	if err != nil {
 		return err
 	}
@@ -157,68 +132,20 @@ func (u *updater) updateAddon(addon string, source UpdateSource) error {
 	return nil
 }
 
-// from https://golangcode.com/unzip-files-in-go/
-func unzip(src string, dest string) ([]string, error) {
-	var filenames []string
-
-	r, err := zip.OpenReader(src)
-	if err != nil {
-		return filenames, err
-	}
-	defer r.Close()
-
-	for _, f := range r.File {
-
-		// Store filename/path for returning and using later on
-		fpath := filepath.Join(dest, f.Name)
-
-		// Check for ZipSlip. More Info: http://bit.ly/2MsjAWE
-		if !strings.HasPrefix(fpath, filepath.Clean(dest)+string(os.PathSeparator)) {
-			return filenames, fmt.Errorf("%s: illegal file path", fpath)
-		}
-
-		filenames = append(filenames, fpath)
-
-		if f.FileInfo().IsDir() {
-			// Make Folder
-			os.MkdirAll(fpath, os.ModePerm)
-			continue
-		}
-
-		// Make File
-		if err = os.MkdirAll(filepath.Dir(fpath), os.ModePerm); err != nil {
-			return filenames, err
-		}
-
-		outFile, err := os.OpenFile(fpath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
-		if err != nil {
-			return filenames, err
-		}
-
-		rc, err := f.Open()
-		if err != nil {
-			return filenames, err
-		}
-
-		_, err = io.Copy(outFile, rc)
-
-		// Close the file without defer to close before next iteration of loop
-		outFile.Close()
-		rc.Close()
-
-		if err != nil {
-			return filenames, err
+func getSource(addon string) (UpdateSource, error) {
+	for _, source := range addonSources {
+		if source.GetURLRegex().Match([]byte(addon)) {
+			return source, nil
 		}
 	}
-	return filenames, nil
+
+	return nil, fmt.Errorf("addon url: %s is not supported", addon)
 }
 
-func readVersionsFile(path string) (AddonVersions, error) {
-	versions := AddonVersions{
-		Addons: make([]Addon, 0),
-	}
+func readVersionsFile(path string) (Versions, error) {
+	var versions Versions
 
-	if !fileExists(path) {
+	if !util.FileExists(path) {
 		return versions, nil
 	}
 
@@ -232,11 +159,42 @@ func readVersionsFile(path string) (AddonVersions, error) {
 	return versions, err
 }
 
-func fileExists(filename string) bool {
-	info, err := os.Stat(filename)
-	if os.IsNotExist(err) {
-		return false
+func saveVersionsFile(u *Updater, path string, mode os.FileMode) error {
+	versions := Versions{
+		Classic: getAddons(&u.classic),
+		Retail:  getAddons(&u.retail),
 	}
 
-	return !info.IsDir()
+	out, err := yaml.Marshal(versions)
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(path, out, mode)
+
+	return err
+}
+
+func mapAddonVersions(addons []Addon) map[string]string {
+	addonVersions := make(map[string]string, len(addons))
+	for _, addon := range addons {
+		addonVersions[addon.Name] = addon.Version
+	}
+
+	return addonVersions
+}
+
+func getAddons(g *gameUpdater) []Addon {
+	addons := make([]Addon, len(g.versions))
+	i := 0
+
+	for addon, version := range g.versions {
+		addons[i] = Addon{
+			Name:    addon,
+			Version: version,
+		}
+		i++
+	}
+
+	return addons
 }

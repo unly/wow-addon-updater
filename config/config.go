@@ -8,6 +8,7 @@ import (
 
 type Config struct {
 	Classic WowConfig `yaml:"classic"`
+	Retail  WowConfig `yaml:"retail"`
 }
 
 type WowConfig struct {
