@@ -20,6 +20,7 @@ const (
 
 var addonSources []UpdateSource = []UpdateSource{
 	sources.NewGitHubSource(),
+	sources.NewTukUiSource(),
 }
 
 type Updater struct {
