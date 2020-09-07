@@ -3,6 +3,7 @@ package sources
 import (
 	"fmt"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -12,13 +13,15 @@ import (
 
 type TukUiSource struct {
 	*source
-	client *tukui.Client
+	client  *tukui.Client
+	idRegex *regexp.Regexp
 }
 
 func NewTukUiSource() *TukUiSource {
 	return &TukUiSource{
-		source: newSource(`https://www\.tukui\.org/(classic-)?addons\.php\?id=[0-9]+`, "tukui"),
-		client: tukui.NewClient(nil),
+		source:  newSource(`(https?://)?(www\.)?tukui\.org/(classic-)?addons\.php\?id=[0-9]+`, "tukui"),
+		client:  tukui.NewClient(nil),
+		idRegex: regexp.MustCompile(`id=[0-9]+`),
 	}
 }
 
@@ -39,12 +42,9 @@ func (t *TukUiSource) GetLatestVersion(addon string) (string, error) {
 func (t *TukUiSource) getAddon(url string) (tukui.Addon, error) {
 	var addon tukui.Addon
 
-	urlSplit := strings.Split(url, "=")
-	if len(urlSplit) != 2 {
-		return addon, fmt.Errorf("%s is an invalid url for tukui.org", url)
-	}
-
-	id, err := strconv.Atoi(urlSplit[1])
+	idString := t.idRegex.FindString(url)
+	idString = idString[3:]
+	id, err := strconv.Atoi(idString)
 	if err != nil {
 		return addon, err
 	}

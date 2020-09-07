@@ -4,7 +4,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"regexp"
 )
 
@@ -35,17 +34,11 @@ func (s *source) downloadZip(url string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	defer file.Close()
 
-	path := file.Name()
-	out, err := os.Create(path)
-	if err != nil {
-		return "", err
-	}
-	defer out.Close()
+	_, err = io.Copy(file, resp.Body)
 
-	_, err = io.Copy(out, resp.Body)
-
-	return path, err
+	return file.Name(), err
 }
 
 func createTempDir(postfix string) string {
