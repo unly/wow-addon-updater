@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/unly/wow-addon-updater/config"
@@ -28,4 +29,6 @@ func main() {
 	}
 
 	log.Println("enjoy the updates!")
+	log.Println("press Enter to quit")
+	fmt.Scanln()
 }
