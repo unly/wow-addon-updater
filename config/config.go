@@ -2,6 +2,7 @@ package config
 
 import (
 	"io/ioutil"
+	"os"
 
 	"gopkg.in/yaml.v3"
 )
@@ -26,4 +27,14 @@ func ReadConfig(path string) (Config, error) {
 	err = yaml.Unmarshal(yamlFile, &c)
 
 	return c, err
+}
+
+func CreateDefaultConfig(path string) error {
+	var c Config
+	out, err := yaml.Marshal(c)
+	if err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(path, out, os.FileMode(0666))
 }

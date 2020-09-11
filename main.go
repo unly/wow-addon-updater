@@ -7,6 +7,7 @@ import (
 
 	"github.com/unly/wow-addon-updater/config"
 	"github.com/unly/wow-addon-updater/updater"
+	"github.com/unly/wow-addon-updater/util"
 )
 
 const configPath string = "config.yaml"
@@ -15,10 +16,21 @@ func main() {
 	path := flag.String("c", configPath, "path to the config file")
 	flag.Parse()
 	if path == nil {
-		log.Panicf("no configuration file to read in")
+		log.Panicf("no configuration file to read in\n")
 	}
 
 	log.Println("starting the wow addon manager")
+
+	if !util.FileExists(*path) {
+		err := config.CreateDefaultConfig(*path)
+		if err != nil {
+			log.Panicf("failed to create a default config file: %v\n", err)
+		}
+
+		log.Printf("no config file found. created empty config at: %s\n", *path)
+		log.Println("see https://github.com/unly/wow-addon-updater for information")
+		return
+	}
 
 	conf, err := config.ReadConfig(*path)
 	if err != nil {
