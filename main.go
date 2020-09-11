@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 
@@ -11,9 +12,15 @@ import (
 const configPath string = "config.yaml"
 
 func main() {
+	path := flag.String("c", configPath, "path to the config file")
+	flag.Parse()
+	if path == nil {
+		log.Panicf("no configuration file to read in")
+	}
+
 	log.Println("starting the wow addon manager")
 
-	conf, err := config.ReadConfig(configPath)
+	conf, err := config.ReadConfig(*path)
 	if err != nil {
 		log.Panicf("failed to read in the config file: %v\n", err)
 	}
