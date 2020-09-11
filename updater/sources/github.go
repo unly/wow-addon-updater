@@ -21,7 +21,7 @@ type GithubSource struct {
 
 func NewGitHubSource() *GithubSource {
 	return &GithubSource{
-		source:    newSource(`https://github.com/([a-zA-Z0-9]|-)+/([a-zA-Z0-9]|-)+`, "github"),
+		source:    newSource(`(https?://)?github\.com/([a-zA-Z0-9]|-)+/([a-zA-Z0-9]|-)+`, "github"),
 		client:    github.NewClient(nil),
 		repoRegex: regexp.MustCompile(`/([a-zA-Z0-9]|-)+/([a-zA-Z0-9]|-)+`),
 	}
