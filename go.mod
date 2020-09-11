@@ -4,6 +4,6 @@ go 1.15
 
 require (
 	github.com/google/go-github/v32 v32.1.0
-	github.com/unly/go-tukui v0.2.0
+	github.com/unly/go-tukui v1.0.0
 	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
 )
