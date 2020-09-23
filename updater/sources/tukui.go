@@ -15,13 +15,15 @@ type TukUiSource struct {
 	*source
 	client  *tukui.Client
 	idRegex *regexp.Regexp
+	uiRegex *regexp.Regexp
 }
 
 func NewTukUiSource() *TukUiSource {
 	return &TukUiSource{
-		source:  newSource(`(https?://)?(www\.)?tukui\.org/(classic-)?addons\.php\?id=[0-9]+`, "tukui"),
+		source:  newSource(`(https?://)?(www\.)?tukui\.org/((classic-)?addons\.php\?id=[0-9]+)|(download\.php\?ui=(tukui|elvui))`, "tukui"),
 		client:  tukui.NewClient(nil),
 		idRegex: regexp.MustCompile(`id=[0-9]+`),
+		uiRegex: regexp.MustCompile(`ui=(tukui|elvui)`),
 	}
 }
 
@@ -40,11 +42,38 @@ func (t *TukUiSource) GetLatestVersion(addon string) (string, error) {
 }
 
 func (t *TukUiSource) getAddon(url string) (tukui.Addon, error) {
+	// regular addon parameter queries
+	if t.idRegex.FindString(url) != "" {
+		return t.getRegularAddon(url)
+	}
+
+	// tukui and elvui queries
+	ui := t.uiRegex.FindString(url)
+	if len(ui) < 3 {
+		return tukui.Addon{}, fmt.Errorf("failed to match: %s to a tukui.org query", url)
+	}
+
+	switch ui[3:] {
+	case "tukui":
+		tukui, resp, err := t.client.RetailAddons.GetTukUI()
+		return tukui, checkHTTPResponse(resp, err)
+	case "elvui":
+		elvui, resp, err := t.client.RetailAddons.GetElvUI()
+		return elvui, checkHTTPResponse(resp, err)
+	default:
+		return tukui.Addon{}, fmt.Errorf("given tukui.org ui addon link is not supported")
+	}
+}
+
+func (t *TukUiSource) getRegularAddon(url string) (tukui.Addon, error) {
 	var addon tukui.Addon
 
 	idString := t.idRegex.FindString(url)
-	idString = idString[3:]
-	id, err := strconv.Atoi(idString)
+	if len(idString) < 3 {
+		return tukui.Addon{}, fmt.Errorf("failed to match: %s to a tukui.org query", url)
+	}
+
+	id, err := strconv.Atoi(idString[3:])
 	if err != nil {
 		return addon, err
 	}
@@ -55,14 +84,8 @@ func (t *TukUiSource) getAddon(url string) (tukui.Addon, error) {
 	} else {
 		addon, resp, err = t.client.RetailAddons.GetAddon(id)
 	}
-	if err != nil {
-		return addon, err
-	}
-	if !(resp.StatusCode >= 200 && resp.StatusCode < 300) {
-		return addon, fmt.Errorf("failed to get latest version. error code: %s", resp.Status)
-	}
 
-	return addon, nil
+	return addon, checkHTTPResponse(resp, err)
 }
 
 func (t *TukUiSource) DownloadAddon(addon, dir string) error {
