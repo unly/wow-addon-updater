@@ -1,6 +1,7 @@
 package sources
 
 import (
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -25,7 +26,7 @@ func (s *source) GetURLRegex() *regexp.Regexp {
 
 func (s *source) downloadZip(url string) (string, error) {
 	resp, err := http.Get(url)
-	if err != nil {
+	if err := checkHTTPResponse(resp, err); err != nil {
 		return "", err
 	}
 	defer resp.Body.Close()
@@ -48,4 +49,20 @@ func createTempDir(postfix string) string {
 	}
 
 	return path
+}
+
+func checkHTTPResponse(resp *http.Response, err error) error {
+	if err != nil {
+		return err
+	}
+
+	if resp == nil {
+		return nil
+	}
+
+	if !(resp.StatusCode >= 200 && resp.StatusCode < 300) {
+		return fmt.Errorf("http request failed. error code: %s", resp.Status)
+	}
+
+	return nil
 }
