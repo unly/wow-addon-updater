@@ -21,14 +21,14 @@ type GithubSource struct {
 
 func NewGitHubSource() *GithubSource {
 	return &GithubSource{
-		source:    newSource(`(https?://)?github\.com/([a-zA-Z0-9]|-)+/([a-zA-Z0-9]|-)+`, "github"),
+		source:    newSource(regexp.MustCompile(`(https?://)?github\.com/([a-zA-Z0-9]|-)+/([a-zA-Z0-9]|-)+`), "github"),
 		client:    github.NewClient(nil),
 		repoRegex: regexp.MustCompile(`/([a-zA-Z0-9]|-)+/([a-zA-Z0-9]|-)+`),
 	}
 }
 
-func (g *GithubSource) GetLatestVersion(addon string) (string, error) {
-	release, err := g.getLatestRelease(addon)
+func (g *GithubSource) GetLatestVersion(addonURL string) (string, error) {
+	release, err := g.getLatestRelease(addonURL)
 	if err != nil {
 		return "", err
 	}
@@ -36,8 +36,8 @@ func (g *GithubSource) GetLatestVersion(addon string) (string, error) {
 	return release.GetTagName(), nil
 }
 
-func (g *GithubSource) DownloadAddon(addon, dir string) error {
-	release, err := g.getLatestRelease(addon)
+func (g *GithubSource) DownloadAddon(addonURL, dir string) error {
+	release, err := g.getLatestRelease(addonURL)
 	if err != nil {
 		return err
 	}
@@ -80,7 +80,7 @@ func (g *GithubSource) DownloadAddon(addon, dir string) error {
 		if len(dirs) != 1 {
 			return fmt.Errorf("the git archive does not have a single root directory")
 		}
-		_, repo, err := g.getOrgAndRepository(addon)
+		_, repo, err := g.getOrgAndRepository(addonURL)
 		if err != nil {
 			return err
 		}
@@ -94,28 +94,25 @@ func (g *GithubSource) DownloadAddon(addon, dir string) error {
 	return err
 }
 
-func (g *GithubSource) getLatestRelease(addon string) (*github.RepositoryRelease, error) {
-	organization, repo, err := g.getOrgAndRepository(addon)
+func (g *GithubSource) getLatestRelease(addonURL string) (*github.RepositoryRelease, error) {
+	organization, repo, err := g.getOrgAndRepository(addonURL)
 	if err != nil {
 		return nil, err
 	}
 
 	release, resp, err := g.client.Repositories.GetLatestRelease(context.Background(), organization, repo)
-	if err != nil {
+	if err := checkHTTPResponse(resp.Response, err); err != nil {
 		return nil, err
-	}
-	if !(resp.StatusCode >= 200 && resp.StatusCode < 300) {
-		return nil, fmt.Errorf("failed to get latest version. error code: %s", resp.Status)
 	}
 
 	return release, nil
 }
 
-func (g *GithubSource) getOrgAndRepository(addon string) (string, string, error) {
-	repo := g.repoRegex.FindString(addon)
+func (g *GithubSource) getOrgAndRepository(addonURL string) (string, string, error) {
+	repo := g.repoRegex.FindString(addonURL)
 	split := strings.Split(repo, "/")
 	if len(split) != 3 || split[1] == "" || split[2] == "" {
-		return "", "", fmt.Errorf("the given url is invalid for a github repository")
+		return "", "", fmt.Errorf("the given url %s is invalid for a github repository", addonURL)
 	}
 
 	return split[1], split[2], nil
