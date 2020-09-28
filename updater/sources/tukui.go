@@ -11,6 +11,7 @@ import (
 	"github.com/unly/wow-addon-updater/util"
 )
 
+// TukUISource is the source for addons and UIs hosted on tukui.org
 type TukUISource struct {
 	*source
 	client  *tukui.Client
@@ -18,6 +19,7 @@ type TukUISource struct {
 	uiRegex *regexp.Regexp
 }
 
+// NewTukUISource returns a pointer to a newly created TukUISource.
 func NewTukUISource() *TukUISource {
 	return &TukUISource{
 		source:  newSource(regexp.MustCompile(`(https?://)?(www\.)?tukui\.org/((classic-)?addons\.php\?id=[0-9]+)|(download\.php\?ui=(tukui|elvui))`), "tukui"),
@@ -27,6 +29,7 @@ func NewTukUISource() *TukUISource {
 	}
 }
 
+// GetLatestVersion returns the latest version for the given addon URL
 func (t *TukUISource) GetLatestVersion(addonURL string) (string, error) {
 	tukuiAddon, err := t.getAddon(addonURL)
 	if err != nil {
@@ -96,6 +99,7 @@ func (t *TukUISource) getRegularAddon(url string) (tukui.Addon, error) {
 	return addon, checkHTTPResponse(resp, err)
 }
 
+// DownloadAddon downloads and unzip the addon from the given URL to the given directory
 func (t *TukUISource) DownloadAddon(addonURL, dir string) error {
 	tukuiAddon, err := t.getAddon(addonURL)
 	if err != nil {

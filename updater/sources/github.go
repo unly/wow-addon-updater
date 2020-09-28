@@ -13,12 +13,14 @@ import (
 	"github.com/unly/wow-addon-updater/util"
 )
 
+// GithubSource is the source for addons and UIs hosted on github.com
 type GithubSource struct {
 	*source
 	client    *github.Client
 	repoRegex *regexp.Regexp
 }
 
+// NewGitHubSource returns a pointer to a newly created GithubSource.
 func NewGitHubSource() *GithubSource {
 	return &GithubSource{
 		source:    newSource(regexp.MustCompile(`(https?://)?github\.com/([a-zA-Z0-9]|-)+/([a-zA-Z0-9]|-)+`), "github"),
@@ -27,6 +29,7 @@ func NewGitHubSource() *GithubSource {
 	}
 }
 
+// GetLatestVersion returns the git tag of the latest release of the given repository URL.
 func (g *GithubSource) GetLatestVersion(addonURL string) (string, error) {
 	release, err := g.getLatestRelease(addonURL)
 	if err != nil {
@@ -36,6 +39,10 @@ func (g *GithubSource) GetLatestVersion(addonURL string) (string, error) {
 	return release.GetTagName(), nil
 }
 
+// DownloadAddon downloads and unzip the addon if there is just one .zip archive attached
+// to the latest release.
+// Otherwise the git repository itself will be downloaded and copied to the given
+// directory.
 func (g *GithubSource) DownloadAddon(addonURL, dir string) error {
 	release, err := g.getLatestRelease(addonURL)
 	if err != nil {
