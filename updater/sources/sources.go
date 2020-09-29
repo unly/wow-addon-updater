@@ -13,9 +13,9 @@ type source struct {
 	tempDir string
 }
 
-func newSource(regex, name string) *source {
+func newSource(regex *regexp.Regexp, name string) *source {
 	return &source{
-		regex:   regexp.MustCompile(regex),
+		regex:   regex,
 		tempDir: createTempDir(name),
 	}
 }

@@ -9,18 +9,15 @@ import (
 	"strings"
 )
 
+// FileExists checks whether the given file path exists or not.
 func FileExists(filename string) bool {
 	info, err := os.Stat(filename)
-	if os.IsNotExist(err) {
-		return false
-	}
-
-	return !info.IsDir()
+	return !os.IsNotExist(err) && !info.IsDir()
 }
 
-// from https://golangcode.com/unzip-files-in-go/
 // Unzip will decompress a zip archive, moving all files and folders
 // within the zip file (parameter 1) to an output directory (parameter 2).
+// from https://golangcode.com/unzip-files-in-go/
 func Unzip(src string, dest string) ([]string, error) {
 
 	var filenames []string
