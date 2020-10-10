@@ -76,17 +76,11 @@ func Unzip(src string, dest string) ([]string, error) {
 }
 
 // WriteToHiddenFile writes the given data to a hidden file.
-// The file name will always have a prefix of '.'. Will modify the path if necessary.
 func WriteToHiddenFile(path string, data []byte, perm os.FileMode) error {
-	if filename := filepath.Base(path); !strings.HasPrefix(filename, ".") {
-		filename = "." + filename
-		path = filepath.Join(filepath.Dir(path), filename)
-	}
-
 	err := ioutil.WriteFile(path, data, perm)
 	if err != nil {
 		return err
 	}
 
-	return hideFile(path)
+	return HideFile(path)
 }
