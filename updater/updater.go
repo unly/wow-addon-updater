@@ -194,7 +194,7 @@ func saveVersionsFile(u *Updater, path string) error {
 		return err
 	}
 
-	return ioutil.WriteFile(path, out, os.FileMode(0666))
+	return util.WriteToHiddenFile(path, out, os.FileMode(0666))
 }
 
 func mapAddonVersions(addons []addon) map[string]addon {
