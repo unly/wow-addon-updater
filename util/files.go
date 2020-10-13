@@ -76,10 +76,11 @@ func Unzip(src string, dest string) ([]string, error) {
 }
 
 // WriteToHiddenFile writes the given data to a hidden file.
-func WriteToHiddenFile(path string, data []byte, perm os.FileMode) error {
+// Returns the path to the file. Might return an error.
+func WriteToHiddenFile(path string, data []byte, perm os.FileMode) (string, error) {
 	err := ioutil.WriteFile(path, data, perm)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	return HideFile(path)
