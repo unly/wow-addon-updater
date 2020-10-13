@@ -18,6 +18,7 @@ const versionFile string = ".versions"
 var addonSources []UpdateSource = []UpdateSource{
 	sources.NewGitHubSource(),
 	sources.NewTukUISource(),
+	sources.NewWoWInterfaceSource(),
 }
 
 // Updater is the main struct to update all addons for both
