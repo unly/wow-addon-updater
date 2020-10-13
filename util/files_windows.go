@@ -17,8 +17,8 @@ func HideFile(path string) (string, error) {
 
 	filenameW, err := syscall.UTF16PtrFromString(path)
 	if err != nil {
-		return filenameW, err
+		return "", err
 	}
 
-	return filenameW, syscall.SetFileAttributes(filenameW, syscall.FILE_ATTRIBUTE_HIDDEN)
+	return path, syscall.SetFileAttributes(filenameW, syscall.FILE_ATTRIBUTE_HIDDEN)
 }
