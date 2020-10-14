@@ -16,16 +16,6 @@ func isHidden(t *testing.T, path string) {
 	assert.True(t, strings.HasPrefix(filepath.Base(path), "."))
 }
 
-func setFileReadOnly(t *testing.T, path string) {
-	err := os.Chmod(path, os.FileMode(0400))
-	assert.NoError(t, err)
-}
-
-func setFileWriteable(t *testing.T, path string) {
-	err := os.Chmod(path, os.FileMode(0600))
-	assert.NoError(t, err)
-}
-
 func Test_HideFile(t *testing.T) {
 	dir, err := ioutil.TempDir("", "hidden-files-unix")
 	assert.NoError(t, err)

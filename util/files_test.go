@@ -9,6 +9,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func setFileReadOnly(t *testing.T, path string) {
+	err := os.Chmod(path, os.FileMode(0400))
+	assert.NoError(t, err)
+}
+
+func setFileWriteable(t *testing.T, path string) {
+	err := os.Chmod(path, os.FileMode(0600))
+	assert.NoError(t, err)
+}
+
 func Test_FileExists(t *testing.T) {
 	tests := []struct {
 		setup    func() string

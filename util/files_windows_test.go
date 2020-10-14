@@ -22,16 +22,6 @@ func isHidden(t *testing.T, path string) {
 	assert.True(t, attrs&syscall.FILE_ATTRIBUTE_HIDDEN != 0)
 }
 
-func setFileReadOnly(t *testing.T, path string) {
-	err := os.Chmod(path, os.FileMode(0400))
-	assert.NoError(t, err)
-}
-
-func setFileWriteable(t *testing.T, path string) {
-	err := os.Chmod(path, os.FileMode(0600))
-	assert.NoError(t, err)
-}
-
 func Test_HideFile(t *testing.T) {
 	dir, err := ioutil.TempDir("", "hidden-files-windows")
 	assert.NoError(t, err)
