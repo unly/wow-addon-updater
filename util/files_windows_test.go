@@ -12,18 +12,24 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func isHidden(path string) bool {
+func isHidden(t *testing.T, path string) {
 	filenameW, err := syscall.UTF16PtrFromString(path)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(t, err)
 
 	attrs, err := syscall.GetFileAttributes(filenameW)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(t, err)
 
-	return attrs&syscall.FILE_ATTRIBUTE_HIDDEN != 0
+	assert.True(t, attrs&syscall.FILE_ATTRIBUTE_HIDDEN != 0)
+}
+
+func setFileReadOnly(t *testing.T, path string) {
+	err := os.Chmod(path, os.FileMode(0400))
+	assert.NoError(t, err)
+}
+
+func setFileWriteable(t *testing.T, path string) {
+	err := os.Chmod(path, os.FileMode(0600))
+	assert.NoError(t, err)
 }
 
 func Test_HideFile(t *testing.T) {
@@ -104,7 +110,7 @@ func Test_HideFile(t *testing.T) {
 		} else {
 			assert.NoError(t, err)
 			assert.Equal(t, path, actual)
-			assert.True(t, isHidden(actual))
+			isHidden(t, actual)
 		}
 
 		tt.teardown(path)

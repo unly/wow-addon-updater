@@ -104,15 +104,14 @@ func Test_WriteToHiddenFile(t *testing.T) {
 			path: func() string {
 				f, err := ioutil.TempFile(dir, "test3")
 				assert.NoError(t, err)
-				err = f.Chmod(os.FileMode(0444))
-				assert.NoError(t, err)
+				setFileReadOnly(t, f.Name())
 				return f.Name()
 			},
 			data:        []byte("i should not be there"),
 			perm:        os.FileMode(0666),
 			expectError: true,
 			teardown: func(path string) {
-				os.Chmod(path, os.FileMode(0666))
+				setFileWriteable(t, path)
 				os.Remove(path)
 			},
 		},
@@ -133,21 +132,22 @@ func Test_WriteToHiddenFile(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		path, actual := WriteToHiddenFile(tt.path(), tt.data, tt.perm)
+		filePath := tt.path()
+		path, actual := WriteToHiddenFile(filePath, tt.data, tt.perm)
 
 		if tt.expectError {
 			assert.Error(t, actual, "WriteToHiddenFile() returned no error")
 			_, err := ioutil.ReadFile(path)
 			assert.Error(t, err)
+			tt.teardown(filePath)
 		} else {
 			assert.NoError(t, actual, "WriteToHiddenFile() returned error %+v", actual)
-			assert.True(t, isHidden(path), "WriteToHiddenFile() file is not hidden")
+			isHidden(t, path)
 			actualBody, err := ioutil.ReadFile(path)
 			assert.NoError(t, err, "failed to read in temporary file %s", path)
 			assert.Equal(t, tt.data, actualBody, "WriteToHiddenFile() file content wrong")
+			tt.teardown(path)
 		}
-
-		tt.teardown(path)
 	}
 }
 
