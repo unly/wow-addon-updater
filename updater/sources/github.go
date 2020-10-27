@@ -4,33 +4,53 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/google/go-github/v32/github"
+	"github.com/unly/wow-addon-updater/updater"
 	"github.com/unly/wow-addon-updater/util"
 )
 
-// GithubSource is the source for addons and UIs hosted on github.com
-type GithubSource struct {
+type latestReleaser interface {
+	LatestRelease(owner, repo string) (*github.RepositoryRelease, *http.Response, error)
+}
+
+type githubWrapper struct {
+	client *github.Client
+}
+
+func (w *githubWrapper) LatestRelease(owner, repo string) (*github.RepositoryRelease, *http.Response, error) {
+	release, resp, err := w.client.Repositories.GetLatestRelease(context.Background(), owner, repo)
+	return release, resp.Response, err
+}
+
+type githubSource struct {
 	*source
-	client    *github.Client
+	client    latestReleaser
 	repoRegex *regexp.Regexp
 }
 
 // NewGitHubSource returns a pointer to a newly created GithubSource.
-func NewGitHubSource() *GithubSource {
-	return &GithubSource{
-		source:    newSource(regexp.MustCompile(`(https?://)?github\.com/([a-zA-Z0-9]|-)+/([a-zA-Z0-9]|-)+`), "github"),
-		client:    github.NewClient(nil),
+func NewGitHubSource() updater.UpdateSource {
+	return newGitHubSource()
+}
+
+func newGitHubSource() *githubSource {
+	return &githubSource{
+		source: newSource(regexp.MustCompile(`^(https?://)?github\.com/([a-zA-Z0-9]|-)+/([a-zA-Z0-9]|-)+/?$`), "github"),
+		client: &githubWrapper{
+			client: github.NewClient(nil),
+		},
 		repoRegex: regexp.MustCompile(`/([a-zA-Z0-9]|-)+/([a-zA-Z0-9]|-)+`),
 	}
 }
 
 // GetLatestVersion returns the git tag of the latest release of the given repository URL.
-func (g *GithubSource) GetLatestVersion(addonURL string) (string, error) {
+func (g *githubSource) GetLatestVersion(addonURL string) (string, error) {
 	release, err := g.getLatestRelease(addonURL)
 	if err != nil {
 		return "", err
@@ -43,7 +63,7 @@ func (g *GithubSource) GetLatestVersion(addonURL string) (string, error) {
 // to the latest release.
 // Otherwise the git repository itself will be downloaded and copied to the given
 // directory.
-func (g *GithubSource) DownloadAddon(addonURL, dir string) error {
+func (g *githubSource) DownloadAddon(addonURL, dir string) error {
 	release, err := g.getLatestRelease(addonURL)
 	if err != nil {
 		return err
@@ -101,21 +121,21 @@ func (g *GithubSource) DownloadAddon(addonURL, dir string) error {
 	return err
 }
 
-func (g *GithubSource) getLatestRelease(addonURL string) (*github.RepositoryRelease, error) {
+func (g *githubSource) getLatestRelease(addonURL string) (*github.RepositoryRelease, error) {
 	organization, repo, err := g.getOrgAndRepository(addonURL)
 	if err != nil {
 		return nil, err
 	}
 
-	release, resp, err := g.client.Repositories.GetLatestRelease(context.Background(), organization, repo)
-	if err := checkHTTPResponse(resp.Response, err); err != nil {
+	release, resp, err := g.client.LatestRelease(organization, repo)
+	if err := checkHTTPResponse(resp, err); err != nil {
 		return nil, err
 	}
 
 	return release, nil
 }
 
-func (g *GithubSource) getOrgAndRepository(addonURL string) (string, string, error) {
+func (g *githubSource) getOrgAndRepository(addonURL string) (string, string, error) {
 	repo := g.repoRegex.FindString(addonURL)
 	split := strings.Split(repo, "/")
 	if len(split) != 3 || split[1] == "" || split[2] == "" {

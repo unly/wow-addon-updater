@@ -7,6 +7,7 @@ import (
 
 	"github.com/unly/wow-addon-updater/config"
 	"github.com/unly/wow-addon-updater/updater"
+	"github.com/unly/wow-addon-updater/updater/sources"
 	"github.com/unly/wow-addon-updater/util"
 )
 
@@ -37,7 +38,13 @@ func main() {
 		log.Panicf("failed to read in the config file: %v\n", err)
 	}
 
-	updater, err := updater.NewUpdater(conf)
+	sources := []updater.UpdateSource{
+		sources.NewGitHubSource(),
+		sources.NewTukUISource(),
+		sources.NewWoWInterfaceSource(),
+	}
+
+	updater, err := updater.NewUpdater(conf, sources)
 	if err != nil {
 		log.Panicf("failed to initialize the updater: %v\n", err)
 	}

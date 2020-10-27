@@ -8,24 +8,18 @@ import (
 	"regexp"
 
 	"github.com/unly/wow-addon-updater/config"
-	"github.com/unly/wow-addon-updater/updater/sources"
 	"github.com/unly/wow-addon-updater/util"
 	"gopkg.in/yaml.v3"
 )
 
 const versionFile string = ".versions"
 
-var addonSources []UpdateSource = []UpdateSource{
-	sources.NewGitHubSource(),
-	sources.NewTukUISource(),
-	sources.NewWoWInterfaceSource(),
-}
-
 // Updater is the main struct to update all addons for both
 // retail and classic installations.
 type Updater struct {
 	classic gameUpdater
 	retail  gameUpdater
+	sources []UpdateSource
 }
 
 type gameUpdater struct {
@@ -57,7 +51,7 @@ type versions struct {
 // NewUpdater returns a pointer to a newly created Updater or an error if it fails to read in
 // the version tracking file.
 // Uses the config.Config to identify the addons
-func NewUpdater(config config.Config) (*Updater, error) {
+func NewUpdater(config config.Config, sources []UpdateSource) (*Updater, error) {
 	readVersions, err := readVersionsFile(versionFile)
 	if err != nil {
 		return nil, err
@@ -72,6 +66,7 @@ func NewUpdater(config config.Config) (*Updater, error) {
 			config:   config.Retail,
 			versions: mapAddonVersions(readVersions.Retail),
 		},
+		sources: sources,
 	}, nil
 }
 
@@ -83,11 +78,11 @@ func (u *Updater) UpdateAddons() error {
 		}
 	}()
 
-	err := u.retail.updateAddons()
+	err := u.retail.updateAddons(u.sources)
 	if err != nil {
 		return err
 	}
-	err = u.classic.updateAddons()
+	err = u.classic.updateAddons(u.sources)
 	if err != nil {
 		return err
 	}
@@ -95,9 +90,9 @@ func (u *Updater) UpdateAddons() error {
 	return nil
 }
 
-func (g *gameUpdater) updateAddons() error {
+func (g *gameUpdater) updateAddons(sources []UpdateSource) error {
 	for _, addon := range g.config.AddOns {
-		source, err := getSource(addon)
+		source, err := getSource(sources, addon)
 		if err != nil {
 			return err
 		}
@@ -157,8 +152,8 @@ func (g *gameUpdater) updateAddon(addonURL string, source UpdateSource) error {
 	return nil
 }
 
-func getSource(addonURL string) (UpdateSource, error) {
-	for _, source := range addonSources {
+func getSource(sources []UpdateSource, addonURL string) (UpdateSource, error) {
+	for _, source := range sources {
 		if source.GetURLRegex().MatchString(addonURL) {
 			return source, nil
 		}
