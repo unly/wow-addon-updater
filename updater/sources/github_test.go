@@ -336,8 +336,8 @@ func Test_DownloadAddon(t *testing.T) {
 
 				teardown := func() {
 					server.Close()
-					tests.DeleteDir(t, dir)
-					tests.DeleteDir(t, source.tempDir)
+					tests.DeleteDir(t, dir)()
+					tests.DeleteDir(t, source.tempDir)()
 				}
 
 				return testStruct{
@@ -378,8 +378,8 @@ func Test_DownloadAddon(t *testing.T) {
 
 				teardown := func() {
 					server.Close()
-					tests.DeleteDir(t, dir)
-					tests.DeleteDir(t, source.tempDir)
+					tests.DeleteDir(t, dir)()
+					tests.DeleteDir(t, source.tempDir)()
 				}
 
 				return testStruct{
@@ -417,8 +417,8 @@ func Test_DownloadAddon(t *testing.T) {
 
 				teardown := func() {
 					server.Close()
-					tests.DeleteDir(t, dir)
-					tests.DeleteDir(t, source.tempDir)
+					tests.DeleteDir(t, dir)()
+					tests.DeleteDir(t, source.tempDir)()
 				}
 
 				return testStruct{
@@ -462,8 +462,8 @@ func Test_DownloadAddon(t *testing.T) {
 
 				teardown := func() {
 					server.Close()
-					tests.DeleteDir(t, dir)
-					tests.DeleteDir(t, source.tempDir)
+					tests.DeleteDir(t, dir)()
+					tests.DeleteDir(t, source.tempDir)()
 				}
 
 				return testStruct{
@@ -510,8 +510,8 @@ func Test_DownloadAddon(t *testing.T) {
 
 				teardown := func() {
 					server.Close()
-					tests.DeleteDir(t, dir)
-					tests.DeleteDir(t, source.tempDir)
+					tests.DeleteDir(t, dir)()
+					tests.DeleteDir(t, source.tempDir)()
 				}
 
 				return testStruct{
@@ -549,8 +549,8 @@ func Test_DownloadAddon(t *testing.T) {
 
 				teardown := func() {
 					server.Close()
-					tests.DeleteDir(t, dir)
-					tests.DeleteDir(t, source.tempDir)
+					tests.DeleteDir(t, dir)()
+					tests.DeleteDir(t, source.tempDir)()
 				}
 
 				return testStruct{
