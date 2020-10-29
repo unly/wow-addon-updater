@@ -10,44 +10,50 @@ import (
 )
 
 func Test_ReadConfig(t *testing.T) {
-	tests := []struct {
-		setup         func() (string, tests.TearDown)
+	type readConfigTest struct {
+		file          string
 		want          Config
 		errorExpected bool
-	}{
-		{
-			setup: func() (string, tests.TearDown) {
-				return ".", tests.NoopTeardown()
-			},
-			want:          Config{},
-			errorExpected: true,
+		teardown      tests.TearDown
+	}
+
+	tests := []func() *readConfigTest{
+		func() *readConfigTest {
+			return &readConfigTest{
+				file:          ".",
+				want:          Config{},
+				errorExpected: true,
+				teardown:      tests.NoopTeardown(),
+			}
 		},
-		{
-			setup: func() (string, tests.TearDown) {
-				return "", tests.NoopTeardown()
-			},
-			want:          Config{},
-			errorExpected: true,
+		func() *readConfigTest {
+			return &readConfigTest{
+				file:          "",
+				want:          Config{},
+				errorExpected: true,
+				teardown:      tests.NoopTeardown(),
+			}
 		},
-		{
-			setup: func() (string, tests.TearDown) {
-				file := tests.TempFile(t, "", []byte("hello world"))
-				return file, tests.DeleteFile(t, file)
-			},
-			want:          Config{},
-			errorExpected: true,
+		func() *readConfigTest {
+			file := tests.TempFile(t, "", []byte("hello world"))
+			return &readConfigTest{
+				file:          file,
+				want:          Config{},
+				errorExpected: true,
+				teardown:      tests.DeleteFile(t, file),
+			}
 		},
-		{
-			setup: func() (string, tests.TearDown) {
-				file := tests.TempFile(t, "", []byte{})
-				return file, tests.DeleteFile(t, file)
-			},
-			want:          Config{},
-			errorExpected: false,
+		func() *readConfigTest {
+			file := tests.TempFile(t, "", []byte{})
+			return &readConfigTest{
+				file:          file,
+				want:          Config{},
+				errorExpected: false,
+				teardown:      tests.DeleteFile(t, file),
+			}
 		},
-		{
-			setup: func() (string, tests.TearDown) {
-				content := []byte(`
+		func() *readConfigTest {
+			content := []byte(`
 classic:
   path: path/to/classic
   addons:
@@ -58,33 +64,35 @@ retail:
   addons:
     - addon3
     - addon4`)
-				file := tests.TempFile(t, "", content)
-				return file, tests.DeleteFile(t, file)
-			},
-			want: Config{
-				Classic: WowConfig{
-					Path: "path/to/classic",
-					AddOns: []string{
-						"addon1",
-						"addon2",
+			file := tests.TempFile(t, "", content)
+			return &readConfigTest{
+				file: file,
+				want: Config{
+					Classic: WowConfig{
+						Path: "path/to/classic",
+						AddOns: []string{
+							"addon1",
+							"addon2",
+						},
+					},
+					Retail: WowConfig{
+						Path: "path/to/retail",
+						AddOns: []string{
+							"addon3",
+							"addon4",
+						},
 					},
 				},
-				Retail: WowConfig{
-					Path: "path/to/retail",
-					AddOns: []string{
-						"addon3",
-						"addon4",
-					},
-				},
-			},
-			errorExpected: false,
+				errorExpected: false,
+				teardown:      tests.DeleteFile(t, file),
+			}
 		},
 	}
 
-	for _, tt := range tests {
-		file, teardown := tt.setup()
+	for _, fn := range tests {
+		tt := fn()
 
-		cfg, err := ReadConfig(file)
+		cfg, err := ReadConfig(tt.file)
 
 		if tt.errorExpected {
 			assert.Error(t, err)
@@ -93,38 +101,43 @@ retail:
 			assert.Equal(t, tt.want, cfg)
 		}
 
-		teardown()
+		tt.teardown()
 	}
 }
 
 func Test_CreateDefaultConfig(t *testing.T) {
+	type createDefaultConfigTest struct {
+		file          string
+		errorExpected bool
+		teardown      tests.TearDown
+	}
+
 	dir := tests.TempDir(t)
 	defer tests.DeleteDir(t, dir)()
 
-	tests := []struct {
-		setup         func() (string, tests.TearDown)
-		errorExpected bool
-	}{
-		{
-			setup: func() (string, tests.TearDown) {
-				file := filepath.Join(dir, "file1")
-				return file, tests.DeleteFile(t, file)
-			},
-			errorExpected: false,
+	tests := []func() *createDefaultConfigTest{
+		func() *createDefaultConfigTest {
+			file := filepath.Join(dir, "file1")
+			return &createDefaultConfigTest{
+				file:          file,
+				errorExpected: false,
+				teardown:      tests.DeleteDir(t, file),
+			}
 		},
-		{
-			setup: func() (string, tests.TearDown) {
-				file := tests.TempFile(t, dir, []byte{})
-				assert.NoError(t, os.Chmod(file, os.FileMode(0400)))
-				return file, tests.DeleteFile(t, file)
-			},
-			errorExpected: true,
+		func() *createDefaultConfigTest {
+			file := tests.TempFile(t, dir, []byte{})
+			assert.NoError(t, os.Chmod(file, os.FileMode(0400)))
+			return &createDefaultConfigTest{
+				file:          file,
+				errorExpected: true,
+				teardown:      tests.DeleteDir(t, file),
+			}
 		},
 	}
 
-	for _, tt := range tests {
-		path, teardown := tt.setup()
-		err := CreateDefaultConfig(path)
+	for _, fn := range tests {
+		tt := fn()
+		err := CreateDefaultConfig(tt.file)
 
 		if tt.errorExpected {
 			assert.Error(t, err)
@@ -132,6 +145,6 @@ func Test_CreateDefaultConfig(t *testing.T) {
 			assert.NoError(t, err)
 		}
 
-		teardown()
+		tt.teardown()
 	}
 }
