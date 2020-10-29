@@ -48,7 +48,7 @@ func Test_ReadConfig(t *testing.T) {
 			return &readConfigTest{
 				file:          file,
 				want:          Config{},
-				errorExpected: true,
+				errorExpected: false,
 				teardown:      tests.DeleteFile(t, file),
 			}
 		},
