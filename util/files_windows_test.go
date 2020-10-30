@@ -64,21 +64,21 @@ func Test_HideFile(t *testing.T) {
 			return &hideFileTest{
 				path:          "",
 				errorExpected: true,
-				teardown:      helpers.NoopTearDown(),
+				teardown:      helpers.NoopTeardown(),
 			}
 		},
 		func() *hideFileTest {
 			return &hideFileTest{
 				path:          ".",
 				errorExpected: true,
-				teardown:      helpers.NoopTearDown(),
+				teardown:      helpers.NoopTeardown(),
 			}
 		},
 		func() *hideFileTest {
 			return &hideFileTest{
 				path:          "fake.file",
 				errorExpected: true,
-				teardown:      helpers.NoopTearDown(),
+				teardown:      helpers.NoopTeardown(),
 			}
 		},
 	}
