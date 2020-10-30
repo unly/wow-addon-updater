@@ -10,89 +10,81 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/unly/wow-addon-updater/util/tests/helpers"
 )
 
 func isHidden(t *testing.T, path string) {
+	t.Helper()
 	assert.True(t, strings.HasPrefix(filepath.Base(path), "."))
 }
 
 func Test_HideFile(t *testing.T) {
-	dir, err := ioutil.TempDir("", "hidden-files-unix")
-	assert.NoError(t, err)
-	defer os.RemoveAll(dir)
-
-	tests := []struct {
-		path          func() string
+	type hideFileTest struct {
+		path          string
 		returnedPath  string
-		expectedError bool
-		teardown      func(path string)
-	}{
-		{
-			path: func() string {
-				f := filepath.Join(dir, "test1")
-				err := ioutil.WriteFile(f, []byte{}, os.FileMode(0666))
-				assert.NoError(t, err)
-				return f
-			},
-			returnedPath:  filepath.Join(dir, ".test1"),
-			expectedError: false,
-			teardown: func(path string) {
-				os.Remove(path)
-			},
+		errorExpected bool
+		teardown      helpers.TearDown
+	}
+
+	tests := []func() *hideFileTest{
+		func() *hideFileTest {
+			dir := helpers.TempDir(t)
+			f := filepath.Join(dir, "test1")
+			err := ioutil.WriteFile(f, []byte{}, os.FileMode(0666))
+			assert.NoError(t, err)
+
+			return &hideFileTest{
+				path:          f,
+				returnedPath:  filepath.Join(dir, ".test1"),
+				errorExpected: false,
+				teardown:      helpers.DeleteDir(t, dir),
+			}
 		},
-		{
-			path: func() string {
-				f := filepath.Join(dir, ".test2")
-				err := ioutil.WriteFile(f, []byte{}, os.FileMode(0666))
-				assert.NoError(t, err)
-				return f
-			},
-			returnedPath:  filepath.Join(dir, ".test2"),
-			expectedError: false,
-			teardown: func(path string) {
-				os.Remove(path)
-			},
+		func() *hideFileTest {
+			dir := helpers.TempDir(t)
+			f := filepath.Join(dir, ".test2")
+			err := ioutil.WriteFile(f, []byte{}, os.FileMode(0666))
+			assert.NoError(t, err)
+
+			return &hideFileTest{
+				path:          f,
+				returnedPath:  filepath.Join(dir, ".test2"),
+				errorExpected: false,
+				teardown:      helpers.DeleteDir(t, dir),
+			}
 		},
-		{
-			path: func() string {
-				return dir
-			},
-			returnedPath:  "",
-			expectedError: true,
-			teardown:      func(path string) {},
+		func() *hideFileTest {
+			return &hideFileTest{
+				path:          "",
+				returnedPath:  "",
+				errorExpected: true,
+				teardown:      helpers.NoopTeardown(),
+			}
 		},
-		{
-			path: func() string {
-				return ""
-			},
-			returnedPath:  "",
-			expectedError: true,
-			teardown:      func(path string) {},
+		func() *hideFileTest {
+			return &hideFileTest{
+				path:          ".",
+				returnedPath:  "",
+				errorExpected: true,
+				teardown:      helpers.NoopTeardown(),
+			}
 		},
-		{
-			path: func() string {
-				return "."
-			},
-			returnedPath:  "",
-			expectedError: true,
-			teardown:      func(path string) {},
-		},
-		{
-			path: func() string {
-				return "fake.file"
-			},
-			returnedPath:  "",
-			expectedError: true,
-			teardown:      func(path string) {},
+		func() *hideFileTest {
+			return &hideFileTest{
+				path:          "fake.file",
+				returnedPath:  "",
+				errorExpected: true,
+				teardown:      helpers.NoopTeardown(),
+			}
 		},
 	}
 
-	for _, tt := range tests {
-		path := tt.path()
+	for _, fn := range tests {
+		tt := fn()
 
-		actual, err := HideFile(path)
+		actual, err := HideFile(tt.path)
 
-		if tt.expectedError {
+		if tt.errorExpected {
 			assert.Error(t, err)
 		} else {
 			assert.NoError(t, err)
@@ -100,6 +92,6 @@ func Test_HideFile(t *testing.T) {
 			isHidden(t, actual)
 		}
 
-		tt.teardown(path)
+		tt.teardown()
 	}
 }

@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/unly/wow-addon-updater/util/tests"
+	"github.com/unly/wow-addon-updater/util/tests/helpers"
 )
 
 func Test_ReadConfig(t *testing.T) {
@@ -14,7 +14,7 @@ func Test_ReadConfig(t *testing.T) {
 		file          string
 		want          Config
 		errorExpected bool
-		teardown      tests.TearDown
+		teardown      helpers.TearDown
 	}
 
 	tests := []func() *readConfigTest{
@@ -23,7 +23,7 @@ func Test_ReadConfig(t *testing.T) {
 				file:          ".",
 				want:          Config{},
 				errorExpected: true,
-				teardown:      tests.NoopTeardown(),
+				teardown:      helpers.NoopTeardown(),
 			}
 		},
 		func() *readConfigTest {
@@ -31,25 +31,25 @@ func Test_ReadConfig(t *testing.T) {
 				file:          "",
 				want:          Config{},
 				errorExpected: true,
-				teardown:      tests.NoopTeardown(),
+				teardown:      helpers.NoopTeardown(),
 			}
 		},
 		func() *readConfigTest {
-			file := tests.TempFile(t, "", []byte("hello world"))
+			file := helpers.TempFile(t, "", []byte("hello world"))
 			return &readConfigTest{
 				file:          file,
 				want:          Config{},
 				errorExpected: true,
-				teardown:      tests.DeleteFile(t, file),
+				teardown:      helpers.DeleteFile(t, file),
 			}
 		},
 		func() *readConfigTest {
-			file := tests.TempFile(t, "", []byte{})
+			file := helpers.TempFile(t, "", []byte{})
 			return &readConfigTest{
 				file:          file,
 				want:          Config{},
 				errorExpected: false,
-				teardown:      tests.DeleteFile(t, file),
+				teardown:      helpers.DeleteFile(t, file),
 			}
 		},
 		func() *readConfigTest {
@@ -64,7 +64,7 @@ retail:
   addons:
     - addon3
     - addon4`)
-			file := tests.TempFile(t, "", content)
+			file := helpers.TempFile(t, "", content)
 			return &readConfigTest{
 				file: file,
 				want: Config{
@@ -84,7 +84,7 @@ retail:
 					},
 				},
 				errorExpected: false,
-				teardown:      tests.DeleteFile(t, file),
+				teardown:      helpers.DeleteFile(t, file),
 			}
 		},
 	}
@@ -109,11 +109,11 @@ func Test_CreateDefaultConfig(t *testing.T) {
 	type createDefaultConfigTest struct {
 		file          string
 		errorExpected bool
-		teardown      tests.TearDown
+		teardown      helpers.TearDown
 	}
 
-	dir := tests.TempDir(t)
-	defer tests.DeleteDir(t, dir)()
+	dir := helpers.TempDir(t)
+	defer helpers.DeleteDir(t, dir)()
 
 	tests := []func() *createDefaultConfigTest{
 		func() *createDefaultConfigTest {
@@ -121,16 +121,16 @@ func Test_CreateDefaultConfig(t *testing.T) {
 			return &createDefaultConfigTest{
 				file:          file,
 				errorExpected: false,
-				teardown:      tests.DeleteDir(t, file),
+				teardown:      helpers.DeleteDir(t, file),
 			}
 		},
 		func() *createDefaultConfigTest {
-			file := tests.TempFile(t, dir, []byte{})
+			file := helpers.TempFile(t, dir, []byte{})
 			assert.NoError(t, os.Chmod(file, os.FileMode(0400)))
 			return &createDefaultConfigTest{
 				file:          file,
 				errorExpected: true,
-				teardown:      tests.DeleteDir(t, file),
+				teardown:      helpers.DeleteDir(t, file),
 			}
 		},
 	}
