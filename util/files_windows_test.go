@@ -92,7 +92,7 @@ func Test_HideFile(t *testing.T) {
 			assert.Error(t, err)
 		} else {
 			assert.NoError(t, err)
-			assert.Equal(t, path, actual)
+			assert.Equal(t, tt.path, actual)
 			isHidden(t, actual)
 		}
 
