@@ -11,7 +11,7 @@ import (
 	"github.com/google/go-github/v32/github"
 	"github.com/stretchr/testify/assert"
 	"github.com/unly/wow-addon-updater/updater/sources/mocks"
-	"github.com/unly/wow-addon-updater/util/tests"
+	"github.com/unly/wow-addon-updater/util/tests/helpers"
 )
 
 func Test_getLatestRelease(t *testing.T) {
@@ -285,7 +285,7 @@ func Test_DownloadAddon(t *testing.T) {
 		addonURL      string
 		outputDir     string
 		errorExpected bool
-		teardown      tests.TearDown
+		teardown      helpers.TearDown
 	}
 
 	tests := []struct {
@@ -306,7 +306,7 @@ func Test_DownloadAddon(t *testing.T) {
 					addonURL:      "github.com/owner/addon",
 					outputDir:     "",
 					errorExpected: true,
-					teardown:      tests.DeleteDir(t, source.tempDir),
+					teardown:      helpers.DeleteDir(t, source.tempDir),
 				}
 			},
 		},
@@ -332,12 +332,12 @@ func Test_DownloadAddon(t *testing.T) {
 					w.WriteHeader(http.StatusInternalServerError)
 				})
 
-				dir := tests.TempDir(t)
+				dir := helpers.TempDir(t)
 
 				teardown := func() {
 					server.Close()
-					tests.DeleteDir(t, dir)()
-					tests.DeleteDir(t, source.tempDir)()
+					helpers.DeleteDir(t, dir)()
+					helpers.DeleteDir(t, source.tempDir)()
 				}
 
 				return testStruct{
@@ -374,12 +374,12 @@ func Test_DownloadAddon(t *testing.T) {
 					w.WriteHeader(http.StatusInternalServerError)
 				})
 
-				dir := tests.TempDir(t)
+				dir := helpers.TempDir(t)
 
 				teardown := func() {
 					server.Close()
-					tests.DeleteDir(t, dir)()
-					tests.DeleteDir(t, source.tempDir)()
+					helpers.DeleteDir(t, dir)()
+					helpers.DeleteDir(t, source.tempDir)()
 				}
 
 				return testStruct{
@@ -413,12 +413,12 @@ func Test_DownloadAddon(t *testing.T) {
 					w.WriteHeader(http.StatusInternalServerError)
 				})
 
-				dir := tests.TempDir(t)
+				dir := helpers.TempDir(t)
 
 				teardown := func() {
 					server.Close()
-					tests.DeleteDir(t, dir)()
-					tests.DeleteDir(t, source.tempDir)()
+					helpers.DeleteDir(t, dir)()
+					helpers.DeleteDir(t, source.tempDir)()
 				}
 
 				return testStruct{
@@ -458,12 +458,12 @@ func Test_DownloadAddon(t *testing.T) {
 					w.WriteHeader(http.StatusInternalServerError)
 				})
 
-				dir := tests.TempDir(t)
+				dir := helpers.TempDir(t)
 
 				teardown := func() {
 					server.Close()
-					tests.DeleteDir(t, dir)()
-					tests.DeleteDir(t, source.tempDir)()
+					helpers.DeleteDir(t, dir)()
+					helpers.DeleteDir(t, source.tempDir)()
 				}
 
 				return testStruct{
@@ -506,12 +506,12 @@ func Test_DownloadAddon(t *testing.T) {
 					w.WriteHeader(http.StatusOK)
 				})
 
-				dir := tests.TempDir(t)
+				dir := helpers.TempDir(t)
 
 				teardown := func() {
 					server.Close()
-					tests.DeleteDir(t, dir)()
-					tests.DeleteDir(t, source.tempDir)()
+					helpers.DeleteDir(t, dir)()
+					helpers.DeleteDir(t, source.tempDir)()
 				}
 
 				return testStruct{
@@ -545,12 +545,12 @@ func Test_DownloadAddon(t *testing.T) {
 					w.WriteHeader(http.StatusOK)
 				})
 
-				dir := tests.TempDir(t)
+				dir := helpers.TempDir(t)
 
 				teardown := func() {
 					server.Close()
-					tests.DeleteDir(t, dir)()
-					tests.DeleteDir(t, source.tempDir)()
+					helpers.DeleteDir(t, dir)()
+					helpers.DeleteDir(t, source.tempDir)()
 				}
 
 				return testStruct{

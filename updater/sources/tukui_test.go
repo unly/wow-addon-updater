@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/unly/go-tukui"
 	"github.com/unly/wow-addon-updater/updater/sources/mocks"
-	"github.com/unly/wow-addon-updater/util/tests"
+	"github.com/unly/wow-addon-updater/util/tests/helpers"
 )
 
 type addonTest struct {
@@ -18,7 +18,7 @@ type addonTest struct {
 	addonURL      string
 	want          tukui.Addon
 	errorExpected bool
-	teardown      tests.TearDown
+	teardown      helpers.TearDown
 }
 
 func Test_getUIAddon(t *testing.T) {
@@ -47,7 +47,7 @@ func Test_getRegularAddon(t *testing.T) {
 		addonURL      string
 		want          tukui.Addon
 		errorExpected bool
-		teardown      tests.TearDown
+		teardown      helpers.TearDown
 	}
 
 	tests := getIDAddonURLs(t)
@@ -74,7 +74,7 @@ func Test_getAddon(t *testing.T) {
 		addonURL      string
 		want          tukui.Addon
 		errorExpected bool
-		teardown      tests.TearDown
+		teardown      helpers.TearDown
 	}
 
 	testMatrix := getUIAddonURLs(t)
@@ -86,7 +86,7 @@ func Test_getAddon(t *testing.T) {
 			source:        s,
 			addonURL:      "example.com",
 			errorExpected: true,
-			teardown:      tests.DeleteDir(t, s.tempDir),
+			teardown:      helpers.DeleteDir(t, s.tempDir),
 		}
 	})
 
@@ -112,7 +112,7 @@ func Test_GetLatestVersion_TukUI(t *testing.T) {
 		addonURL      string
 		want          string
 		errorExpected bool
-		teardown      tests.TearDown
+		teardown      helpers.TearDown
 	}
 
 	addonTests := getUIAddonURLs(t)
@@ -154,7 +154,7 @@ func Test_DownloadAddon_TukUI(t *testing.T) {
 		addonURL      string
 		dir           string
 		errorExpected bool
-		teardown      tests.TearDown
+		teardown      helpers.TearDown
 	}
 
 	tests := []func() *test{
@@ -165,7 +165,7 @@ func Test_DownloadAddon_TukUI(t *testing.T) {
 				addonURL:      "example.org",
 				dir:           "",
 				errorExpected: true,
-				teardown:      tests.DeleteDir(t, s.tempDir),
+				teardown:      helpers.DeleteDir(t, s.tempDir),
 			}
 		},
 		func() *test {
@@ -181,7 +181,7 @@ func Test_DownloadAddon_TukUI(t *testing.T) {
 				addonURL:      "https://www.tukui.org/download.php?ui=tukui",
 				dir:           "",
 				errorExpected: true,
-				teardown:      tests.DeleteDir(t, s.tempDir),
+				teardown:      helpers.DeleteDir(t, s.tempDir),
 			}
 		},
 		func() *test {
@@ -204,7 +204,7 @@ func Test_DownloadAddon_TukUI(t *testing.T) {
 			})
 			teardown := func() {
 				server.Close()
-				tests.DeleteDir(t, s.tempDir)()
+				helpers.DeleteDir(t, s.tempDir)()
 			}
 			return &test{
 				source:        s,
@@ -234,11 +234,11 @@ func Test_DownloadAddon_TukUI(t *testing.T) {
 				w.Write(content)
 				w.WriteHeader(http.StatusOK)
 			})
-			dir := tests.TempDir(t)
+			dir := helpers.TempDir(t)
 			teardown := func() {
 				server.Close()
-				tests.DeleteDir(t, s.tempDir)()
-				tests.DeleteDir(t, dir)()
+				helpers.DeleteDir(t, s.tempDir)()
+				helpers.DeleteDir(t, dir)()
 			}
 			return &test{
 				source:        s,
@@ -273,7 +273,7 @@ func getUIAddonURLs(t *testing.T) []func() *addonTest {
 				source:        s,
 				addonURL:      "example.com",
 				errorExpected: true,
-				teardown:      tests.DeleteDir(t, s.tempDir),
+				teardown:      helpers.DeleteDir(t, s.tempDir),
 			}
 		},
 		func() *addonTest {
@@ -282,7 +282,7 @@ func getUIAddonURLs(t *testing.T) []func() *addonTest {
 				source:        s,
 				addonURL:      "",
 				errorExpected: true,
-				teardown:      tests.DeleteDir(t, s.tempDir),
+				teardown:      helpers.DeleteDir(t, s.tempDir),
 			}
 		},
 		func() *addonTest {
@@ -291,7 +291,7 @@ func getUIAddonURLs(t *testing.T) []func() *addonTest {
 				source:        s,
 				addonURL:      "tukui.org/abc",
 				errorExpected: true,
-				teardown:      tests.DeleteDir(t, s.tempDir),
+				teardown:      helpers.DeleteDir(t, s.tempDir),
 			}
 		},
 		func() *addonTest {
@@ -310,7 +310,7 @@ func getUIAddonURLs(t *testing.T) []func() *addonTest {
 				addonURL:      "ui=tukui",
 				errorExpected: false,
 				want:          addon,
-				teardown:      tests.DeleteDir(t, s.tempDir),
+				teardown:      helpers.DeleteDir(t, s.tempDir),
 			}
 		},
 		func() *addonTest {
@@ -325,7 +325,7 @@ func getUIAddonURLs(t *testing.T) []func() *addonTest {
 				source:        s,
 				addonURL:      "ui=tukui",
 				errorExpected: true,
-				teardown:      tests.DeleteDir(t, s.tempDir),
+				teardown:      helpers.DeleteDir(t, s.tempDir),
 			}
 		},
 		func() *addonTest {
@@ -344,7 +344,7 @@ func getUIAddonURLs(t *testing.T) []func() *addonTest {
 				addonURL:      "ui=elvui",
 				errorExpected: false,
 				want:          addon,
-				teardown:      tests.DeleteDir(t, s.tempDir),
+				teardown:      helpers.DeleteDir(t, s.tempDir),
 			}
 		},
 		func() *addonTest {
@@ -359,7 +359,7 @@ func getUIAddonURLs(t *testing.T) []func() *addonTest {
 				source:        s,
 				addonURL:      "ui=elvui",
 				errorExpected: true,
-				teardown:      tests.DeleteDir(t, s.tempDir),
+				teardown:      helpers.DeleteDir(t, s.tempDir),
 			}
 		},
 		func() *addonTest {
@@ -368,7 +368,7 @@ func getUIAddonURLs(t *testing.T) []func() *addonTest {
 				source:        s,
 				addonURL:      "ui=unsupported",
 				errorExpected: true,
-				teardown:      tests.DeleteDir(t, s.tempDir),
+				teardown:      helpers.DeleteDir(t, s.tempDir),
 			}
 		},
 	}
@@ -382,7 +382,7 @@ func getIDAddonURLs(t *testing.T) []func() *addonTest {
 				source:        s,
 				addonURL:      "",
 				errorExpected: true,
-				teardown:      tests.DeleteDir(t, s.tempDir),
+				teardown:      helpers.DeleteDir(t, s.tempDir),
 			}
 		},
 		func() *addonTest {
@@ -391,7 +391,7 @@ func getIDAddonURLs(t *testing.T) []func() *addonTest {
 				source:        s,
 				addonURL:      "tukui.org/classic-addons.php?id=abc",
 				errorExpected: true,
-				teardown:      tests.DeleteDir(t, s.tempDir),
+				teardown:      helpers.DeleteDir(t, s.tempDir),
 			}
 		},
 		func() *addonTest {
@@ -410,7 +410,7 @@ func getIDAddonURLs(t *testing.T) []func() *addonTest {
 				addonURL:      "tukui.org/classic-addons.php?id=1",
 				want:          addon,
 				errorExpected: false,
-				teardown:      tests.DeleteDir(t, s.tempDir),
+				teardown:      helpers.DeleteDir(t, s.tempDir),
 			}
 		},
 		func() *addonTest {
@@ -425,7 +425,7 @@ func getIDAddonURLs(t *testing.T) []func() *addonTest {
 				source:        s,
 				addonURL:      "tukui.org/classic-addons.php?id=1",
 				errorExpected: true,
-				teardown:      tests.DeleteDir(t, s.tempDir),
+				teardown:      helpers.DeleteDir(t, s.tempDir),
 			}
 		},
 		func() *addonTest {
@@ -444,7 +444,7 @@ func getIDAddonURLs(t *testing.T) []func() *addonTest {
 				addonURL:      "tukui.org/addons.php?id=2",
 				want:          addon,
 				errorExpected: false,
-				teardown:      tests.DeleteDir(t, s.tempDir),
+				teardown:      helpers.DeleteDir(t, s.tempDir),
 			}
 		},
 		func() *addonTest {
@@ -459,7 +459,7 @@ func getIDAddonURLs(t *testing.T) []func() *addonTest {
 				source:        s,
 				addonURL:      "tukui.org/addons.php?id=2",
 				errorExpected: true,
-				teardown:      tests.DeleteDir(t, s.tempDir),
+				teardown:      helpers.DeleteDir(t, s.tempDir),
 			}
 		},
 	}
