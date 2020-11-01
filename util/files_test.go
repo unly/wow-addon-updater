@@ -75,54 +75,58 @@ func Test_FileExists(t *testing.T) {
 	}
 }
 
-func Test_WriteToHiddenFile(t *testing.T) {
-	type writeToHiddenFileTest struct {
+func Test_IsHiddenFile(t *testing.T) {
+	type isHiddenFileTest struct {
 		path          string
-		data          []byte
-		perm          os.FileMode
+		want          bool
 		errorExpected bool
+		teardown      helpers.TearDown
 	}
 
-	tests := []func() *writeToHiddenFileTest{
-		func() *writeToHiddenFileTest {
-			file := helpers.TempFile(t, "", []byte{})
-
-			return &writeToHiddenFileTest{
-				path:          file,
-				data:          []byte("hello world"),
-				perm:          os.FileMode(0666),
+	tests := []func() *isHiddenFileTest{
+		func() *isHiddenFileTest {
+			return &isHiddenFileTest{
+				path:          "",
+				want:          false,
 				errorExpected: false,
+				teardown:      helpers.NoopTeardown(),
 			}
 		},
-		func() *writeToHiddenFileTest {
-			file := helpers.TempFile(t, "", []byte{})
-
-			return &writeToHiddenFileTest{
-				path:          file,
-				data:          []byte{},
-				perm:          os.FileMode(0666),
+		func() *isHiddenFileTest {
+			return &isHiddenFileTest{
+				path:          ".",
+				want:          false,
 				errorExpected: false,
+				teardown:      helpers.NoopTeardown(),
 			}
 		},
-		func() *writeToHiddenFileTest {
-			file := helpers.TempFile(t, "", []byte{})
-			setFileReadOnly(t, file)
-
-			return &writeToHiddenFileTest{
-				path:          file,
-				data:          []byte("i should not be there"),
-				perm:          os.FileMode(0666),
-				errorExpected: true,
+		func() *isHiddenFileTest {
+			return &isHiddenFileTest{
+				path:          "fake file",
+				want:          false,
+				errorExpected: false,
+				teardown:      helpers.NoopTeardown(),
 			}
 		},
-		func() *writeToHiddenFileTest {
-			file := helpers.TempFile(t, "", []byte("old content"))
+		func() *isHiddenFileTest {
+			file := helpers.TempFile(t, "", []byte{})
 
-			return &writeToHiddenFileTest{
+			return &isHiddenFileTest{
 				path:          file,
-				data:          []byte("new content"),
-				perm:          os.FileMode(0666),
+				want:          false,
 				errorExpected: false,
+				teardown:      helpers.DeleteFile(t, file),
+			}
+		},
+		func() *isHiddenFileTest {
+			file, err := HideFile(helpers.TempFile(t, "", []byte{}))
+			assert.NoError(t, err)
+
+			return &isHiddenFileTest{
+				path:          file,
+				want:          true,
+				errorExpected: false,
+				teardown:      helpers.DeleteFile(t, file),
 			}
 		},
 	}
@@ -130,22 +134,113 @@ func Test_WriteToHiddenFile(t *testing.T) {
 	for _, fn := range tests {
 		tt := fn()
 
-		path, actual := WriteToHiddenFile(tt.path, tt.data, tt.perm)
+		hidden, err := IsHiddenFile(tt.path)
 
 		if tt.errorExpected {
-			assert.Error(t, actual, "WriteToHiddenFile() returned no error")
-			_, err := ioutil.ReadFile(path)
 			assert.Error(t, err)
 		} else {
-			assert.NoError(t, actual, "WriteToHiddenFile() returned error %+v", actual)
-			isHidden(t, path)
-			actualBody, err := ioutil.ReadFile(path)
-			assert.NoError(t, err, "failed to read in temporary file %s", path)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.want, hidden)
+		}
+
+		tt.teardown()
+	}
+}
+
+func Test_WriteToHiddenFile(t *testing.T) {
+	type writeToHiddenFileTest struct {
+		path          string
+		data          []byte
+		perm          os.FileMode
+		errorExpected bool
+		teardown      helpers.TearDown
+	}
+
+	tests := []func() *writeToHiddenFileTest{
+		func() *writeToHiddenFileTest {
+			dir := helpers.TempDir(t)
+			file := filepath.Join(dir, ".test")
+
+			return &writeToHiddenFileTest{
+				path:          file,
+				data:          []byte("hello world"),
+				perm:          os.FileMode(0666),
+				errorExpected: false,
+				teardown:      helpers.DeleteDir(t, dir),
+			}
+		},
+		func() *writeToHiddenFileTest {
+			file, err := HideFile(helpers.TempFile(t, "", []byte{}))
+			assert.NoError(t, err)
+
+			return &writeToHiddenFileTest{
+				path:          file,
+				data:          []byte("hello world"),
+				perm:          os.FileMode(0666),
+				errorExpected: false,
+				teardown:      helpers.DeleteFile(t, file),
+			}
+		},
+		func() *writeToHiddenFileTest {
+			file, err := HideFile(helpers.TempFile(t, "", []byte{}))
+			assert.NoError(t, err)
+
+			return &writeToHiddenFileTest{
+				path:          file,
+				data:          []byte{},
+				perm:          os.FileMode(0666),
+				errorExpected: false,
+				teardown:      helpers.DeleteFile(t, file),
+			}
+		},
+		func() *writeToHiddenFileTest {
+			file, err := HideFile(helpers.TempFile(t, "", []byte{}))
+			assert.NoError(t, err)
+			setFileReadOnly(t, file)
+
+			return &writeToHiddenFileTest{
+				path:          file,
+				data:          []byte("i should not be there"),
+				perm:          os.FileMode(0666),
+				errorExpected: true,
+				teardown: func() {
+					setFileWriteable(t, file)
+					helpers.DeleteFile(t, file)()
+				},
+			}
+		},
+		func() *writeToHiddenFileTest {
+			file, err := HideFile(helpers.TempFile(t, "", []byte("old content")))
+			assert.NoError(t, err)
+
+			return &writeToHiddenFileTest{
+				path:          file,
+				data:          []byte("new content"),
+				perm:          os.FileMode(0666),
+				errorExpected: false,
+				teardown:      helpers.DeleteFile(t, file),
+			}
+		},
+	}
+
+	for _, fn := range tests {
+		tt := fn()
+
+		err := WriteToHiddenFile(tt.path, tt.data, tt.perm)
+
+		if tt.errorExpected {
+			assert.Error(t, err, "WriteToHiddenFile() returned no error")
+		} else {
+			assert.NoError(t, err, "WriteToHiddenFile() returned error %+v", err)
+			hidden, err := IsHiddenFile(tt.path)
+			assert.NoError(t, err)
+			assert.True(t, hidden)
+			actualBody, err := ioutil.ReadFile(tt.path)
+			assert.NoError(t, err, "failed to read in temporary file %s", tt.path)
 			assert.Equal(t, tt.data, actualBody, "WriteToHiddenFile() file content wrong")
 		}
 
 		_ = os.Remove(tt.path)
-		_ = os.Remove(path)
 	}
 }
 

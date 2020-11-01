@@ -13,17 +13,6 @@ import (
 	"github.com/unly/wow-addon-updater/util/tests/helpers"
 )
 
-func isHidden(t *testing.T, path string) {
-	t.Helper()
-	filenameW, err := syscall.UTF16PtrFromString(path)
-	assert.NoError(t, err)
-
-	attrs, err := syscall.GetFileAttributes(filenameW)
-	assert.NoError(t, err)
-
-	assert.True(t, attrs&syscall.FILE_ATTRIBUTE_HIDDEN != 0)
-}
-
 func Test_HideFile(t *testing.T) {
 	type hideFileTest struct {
 		path          string
@@ -49,9 +38,7 @@ func Test_HideFile(t *testing.T) {
 			f := filepath.Join(dir, ".test2")
 			err := ioutil.WriteFile(f, []byte{}, os.FileMode(0666))
 			assert.NoError(t, err)
-			filenameW, err := syscall.UTF16PtrFromString(f)
-			assert.NoError(t, err)
-			err = syscall.SetFileAttributes(filenameW, syscall.FILE_ATTRIBUTE_HIDDEN)
+			err = setFileAttribute(f, syscall.FILE_ATTRIBUTE_HIDDEN)
 			assert.NoError(t, err)
 
 			return &hideFileTest{
@@ -93,9 +80,25 @@ func Test_HideFile(t *testing.T) {
 		} else {
 			assert.NoError(t, err)
 			assert.Equal(t, tt.path, actual)
-			isHidden(t, actual)
+			hidden, err := IsHiddenFile(tt.path)
+			assert.NoError(t, err)
+			assert.True(t, hidden)
 		}
 
 		tt.teardown()
+	}
+}
+
+func Test_IsHiddenFilePath(t *testing.T) {
+	tests := []string{
+		"",
+		".",
+		"file",
+		".file",
+	}
+
+	for _, tt := range tests {
+		actual := IsHiddenFilePath(tt)
+		assert.True(t, actual)
 	}
 }

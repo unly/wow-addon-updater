@@ -6,17 +6,11 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/unly/wow-addon-updater/util/tests/helpers"
 )
-
-func isHidden(t *testing.T, path string) {
-	t.Helper()
-	assert.True(t, strings.HasPrefix(filepath.Base(path), "."))
-}
 
 func Test_HideFile(t *testing.T) {
 	type hideFileTest struct {
@@ -89,9 +83,53 @@ func Test_HideFile(t *testing.T) {
 		} else {
 			assert.NoError(t, err)
 			assert.Equal(t, tt.returnedPath, actual)
-			isHidden(t, actual)
+			hidden, err := IsHiddenFile(actual)
+			assert.NoError(t, err)
+			assert.True(t, hidden)
 		}
 
 		tt.teardown()
 	}
+}
+
+func Test_IsHiddenFilePath(t *testing.T) {
+	tests := []struct {
+		path string
+		want bool
+	}{
+		{
+			path: "",
+			want: false,
+		},
+		{
+			path: ".",
+			want: false,
+		},
+		{
+			path: ".file",
+			want: true,
+		},
+		{
+			path: "/.",
+			want: false,
+		},
+		{
+			path: "/",
+			want: false,
+		},
+		{
+			path: "/a/.file",
+			want: true,
+		},
+	}
+
+	for _, tt := range tests {
+		actual := IsHiddenFilePath(tt.path)
+		assert.Equal(t, tt.want, actual)
+	}
+}
+
+func Test_WriteToHiddenFile_Unix(t *testing.T) {
+	err := WriteToHiddenFile("dir/test.file", []byte("hello world"), os.FileMode(0666))
+	assert.Error(t, err, "WriteToHiddenFile() returned no error")
 }
