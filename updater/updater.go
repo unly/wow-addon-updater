@@ -9,17 +9,17 @@ import (
 
 	"github.com/unly/wow-addon-updater/config"
 	"github.com/unly/wow-addon-updater/util"
+
 	"gopkg.in/yaml.v3"
 )
-
-const versionFile string = ".versions"
 
 // Updater is the main struct to update all addons for both
 // retail and classic installations.
 type Updater struct {
-	classic gameUpdater
-	retail  gameUpdater
-	sources []UpdateSource
+	classic     gameUpdater
+	retail      gameUpdater
+	sources     []UpdateSource
+	versionFile string
 }
 
 type gameUpdater struct {
@@ -51,10 +51,18 @@ type versions struct {
 // NewUpdater returns a pointer to a newly created Updater or an error if it fails to read in
 // the version tracking file.
 // Uses the config.Config to identify the addons
-func NewUpdater(config config.Config, sources []UpdateSource) (*Updater, error) {
+func NewUpdater(config config.Config, sources []UpdateSource, versionFile string) (*Updater, error) {
+	if !util.IsHiddenFilePath(versionFile) {
+		return nil, fmt.Errorf("the version file path %s can not be used for a hidden file", versionFile)
+	}
+
 	readVersions, err := readVersionsFile(versionFile)
 	if err != nil {
 		return nil, err
+	}
+
+	if sources == nil {
+		sources = make([]UpdateSource, 0)
 	}
 
 	return &Updater{
@@ -66,15 +74,16 @@ func NewUpdater(config config.Config, sources []UpdateSource) (*Updater, error) 
 			config:   config.Retail,
 			versions: mapAddonVersions(readVersions.Retail),
 		},
-		sources: sources,
+		sources:     sources,
+		versionFile: versionFile,
 	}, nil
 }
 
 // UpdateAddons updates all the addons given in the configuration
 func (u *Updater) UpdateAddons() error {
 	defer func() {
-		if err := saveVersionsFile(u, versionFile); err != nil {
-			log.Panicf("failed to write versions file: %v", err)
+		if err := saveVersionsFile(u); err != nil {
+			log.Printf("failed to write versions file: %v", err)
 		}
 	}()
 
@@ -116,6 +125,10 @@ func (g *gameUpdater) getCurrentVersion(addonURL string) string {
 }
 
 func (g *gameUpdater) setCurrentVersion(addonURL, version string) {
+	if g.versions == nil {
+		g.versions = make(map[string]addon)
+	}
+
 	add, ok := g.versions[addonURL]
 	if !ok {
 		add = addon{
@@ -179,7 +192,7 @@ func readVersionsFile(path string) (versions, error) {
 	return vers, err
 }
 
-func saveVersionsFile(u *Updater, path string) error {
+func saveVersionsFile(u *Updater) error {
 	vers := versions{
 		Classic: getAddons(&u.classic),
 		Retail:  getAddons(&u.retail),
@@ -190,8 +203,7 @@ func saveVersionsFile(u *Updater, path string) error {
 		return err
 	}
 
-	_, err = util.WriteToHiddenFile(path, out, os.FileMode(0666))
-	return err
+	return util.WriteToHiddenFile(u.versionFile, out, os.FileMode(0666))
 }
 
 func mapAddonVersions(addons []addon) map[string]addon {

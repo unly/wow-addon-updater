@@ -4,7 +4,6 @@ import (
 	"archive/zip"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -73,15 +72,4 @@ func Unzip(src string, dest string) ([]string, error) {
 		}
 	}
 	return filenames, nil
-}
-
-// WriteToHiddenFile writes the given data to a hidden file.
-// Returns the path to the file. Might return an error.
-func WriteToHiddenFile(path string, data []byte, perm os.FileMode) (string, error) {
-	err := ioutil.WriteFile(path, data, perm)
-	if err != nil {
-		return "", err
-	}
-
-	return HideFile(path)
 }

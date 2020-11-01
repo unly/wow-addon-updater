@@ -44,7 +44,7 @@ func main() {
 		sources.NewWoWInterfaceSource(),
 	}
 
-	updater, err := updater.NewUpdater(conf, sources)
+	updater, err := updater.NewUpdater(conf, sources, ".versions")
 	if err != nil {
 		log.Panicf("failed to initialize the updater: %v\n", err)
 	}
