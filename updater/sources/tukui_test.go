@@ -175,7 +175,7 @@ func Test_DownloadAddon_TukUI(t *testing.T) {
 				StatusCode: http.StatusOK,
 			}
 			m.On("GetTukUI").Return(tukui.Addon{}, resp, nil)
-			s.api = m
+			s.retail = m
 			return &test{
 				source:        s,
 				addonURL:      "https://www.tukui.org/download.php?ui=tukui",
@@ -196,8 +196,8 @@ func Test_DownloadAddon_TukUI(t *testing.T) {
 			resp := &http.Response{
 				StatusCode: http.StatusOK,
 			}
-			m.On("GetClassicAddon", 1).Return(addon, resp, nil)
-			s.api = m
+			m.On("GetAddon", 1).Return(addon, resp, nil)
+			s.classic = m
 			mux.HandleFunc("/download/addon", func(w http.ResponseWriter, r *http.Request) {
 				assert.Equal(t, http.MethodGet, r.Method)
 				w.WriteHeader(http.StatusInternalServerError)
@@ -225,8 +225,8 @@ func Test_DownloadAddon_TukUI(t *testing.T) {
 			resp := &http.Response{
 				StatusCode: http.StatusOK,
 			}
-			m.On("GetClassicAddon", 1).Return(addon, resp, nil)
-			s.api = m
+			m.On("GetAddon", 1).Return(addon, resp, nil)
+			s.classic = m
 			mux.HandleFunc("/download/addon", func(w http.ResponseWriter, r *http.Request) {
 				assert.Equal(t, http.MethodGet, r.Method)
 				content, err := ioutil.ReadFile(filepath.Join("_tests", "archive1.zip"))
@@ -304,7 +304,7 @@ func getUIAddonURLs(t *testing.T) []func() *addonTest {
 				StatusCode: http.StatusOK,
 			}
 			m.On("GetTukUI").Return(addon, resp, nil)
-			s.api = m
+			s.retail = m
 			return &addonTest{
 				source:        s,
 				addonURL:      "ui=tukui",
@@ -320,7 +320,7 @@ func getUIAddonURLs(t *testing.T) []func() *addonTest {
 				StatusCode: http.StatusInternalServerError,
 			}
 			m.On("GetTukUI").Return(tukui.Addon{}, resp, nil)
-			s.api = m
+			s.retail = m
 			return &addonTest{
 				source:        s,
 				addonURL:      "ui=tukui",
@@ -338,7 +338,7 @@ func getUIAddonURLs(t *testing.T) []func() *addonTest {
 				StatusCode: http.StatusOK,
 			}
 			m.On("GetElvUI").Return(addon, resp, nil)
-			s.api = m
+			s.retail = m
 			return &addonTest{
 				source:        s,
 				addonURL:      "ui=elvui",
@@ -354,7 +354,7 @@ func getUIAddonURLs(t *testing.T) []func() *addonTest {
 				StatusCode: http.StatusInternalServerError,
 			}
 			m.On("GetElvUI").Return(tukui.Addon{}, resp, nil)
-			s.api = m
+			s.retail = m
 			return &addonTest{
 				source:        s,
 				addonURL:      "ui=elvui",
@@ -403,8 +403,8 @@ func getIDAddonURLs(t *testing.T) []func() *addonTest {
 			resp := &http.Response{
 				StatusCode: http.StatusOK,
 			}
-			m.On("GetClassicAddon", 1).Return(addon, resp, nil)
-			s.api = m
+			m.On("GetAddon", 1).Return(addon, resp, nil)
+			s.classic = m
 			return &addonTest{
 				source:        s,
 				addonURL:      "tukui.org/classic-addons.php?id=1",
@@ -419,8 +419,8 @@ func getIDAddonURLs(t *testing.T) []func() *addonTest {
 			resp := &http.Response{
 				StatusCode: http.StatusBadRequest,
 			}
-			m.On("GetClassicAddon", 1).Return(tukui.Addon{}, resp, nil)
-			s.api = m
+			m.On("GetAddon", 1).Return(tukui.Addon{}, resp, nil)
+			s.classic = m
 			return &addonTest{
 				source:        s,
 				addonURL:      "tukui.org/classic-addons.php?id=1",
@@ -437,8 +437,8 @@ func getIDAddonURLs(t *testing.T) []func() *addonTest {
 			resp := &http.Response{
 				StatusCode: http.StatusOK,
 			}
-			m.On("GetRetailAddon", 2).Return(addon, resp, nil)
-			s.api = m
+			m.On("GetAddon", 2).Return(addon, resp, nil)
+			s.retail = m
 			return &addonTest{
 				source:        s,
 				addonURL:      "tukui.org/addons.php?id=2",
@@ -453,8 +453,8 @@ func getIDAddonURLs(t *testing.T) []func() *addonTest {
 			resp := &http.Response{
 				StatusCode: http.StatusBadRequest,
 			}
-			m.On("GetRetailAddon", 2).Return(tukui.Addon{}, resp, nil)
-			s.api = m
+			m.On("GetAddon", 2).Return(tukui.Addon{}, resp, nil)
+			s.retail = m
 			return &addonTest{
 				source:        s,
 				addonURL:      "tukui.org/addons.php?id=2",

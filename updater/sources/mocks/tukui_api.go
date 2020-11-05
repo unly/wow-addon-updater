@@ -15,8 +15,8 @@ type MockTukUIAPI struct {
 	mock.Mock
 }
 
-// GetClassicAddon provides a mock function with given fields: id
-func (_m *MockTukUIAPI) GetClassicAddon(id int) (tukui.Addon, *http.Response, error) {
+// GetAddon provides a mock function with given fields: id
+func (_m *MockTukUIAPI) GetAddon(id int) (tukui.Addon, *http.Response, error) {
 	ret := _m.Called(id)
 
 	var r0 tukui.Addon
@@ -38,6 +38,38 @@ func (_m *MockTukUIAPI) GetClassicAddon(id int) (tukui.Addon, *http.Response, er
 	var r2 error
 	if rf, ok := ret.Get(2).(func(int) error); ok {
 		r2 = rf(id)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
+}
+
+// GetAddons provides a mock function with given fields:
+func (_m *MockTukUIAPI) GetAddons() ([]tukui.Addon, *http.Response, error) {
+	ret := _m.Called()
+
+	var r0 []tukui.Addon
+	if rf, ok := ret.Get(0).(func() []tukui.Addon); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]tukui.Addon)
+		}
+	}
+
+	var r1 *http.Response
+	if rf, ok := ret.Get(1).(func() *http.Response); ok {
+		r1 = rf()
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*http.Response)
+		}
+	}
+
+	var r2 error
+	if rf, ok := ret.Get(2).(func() error); ok {
+		r2 = rf()
 	} else {
 		r2 = ret.Error(2)
 	}
@@ -68,36 +100,6 @@ func (_m *MockTukUIAPI) GetElvUI() (tukui.Addon, *http.Response, error) {
 	var r2 error
 	if rf, ok := ret.Get(2).(func() error); ok {
 		r2 = rf()
-	} else {
-		r2 = ret.Error(2)
-	}
-
-	return r0, r1, r2
-}
-
-// GetRetailAddon provides a mock function with given fields: id
-func (_m *MockTukUIAPI) GetRetailAddon(id int) (tukui.Addon, *http.Response, error) {
-	ret := _m.Called(id)
-
-	var r0 tukui.Addon
-	if rf, ok := ret.Get(0).(func(int) tukui.Addon); ok {
-		r0 = rf(id)
-	} else {
-		r0 = ret.Get(0).(tukui.Addon)
-	}
-
-	var r1 *http.Response
-	if rf, ok := ret.Get(1).(func(int) *http.Response); ok {
-		r1 = rf(id)
-	} else {
-		if ret.Get(1) != nil {
-			r1 = ret.Get(1).(*http.Response)
-		}
-	}
-
-	var r2 error
-	if rf, ok := ret.Get(2).(func(int) error); ok {
-		r2 = rf(id)
 	} else {
 		r2 = ret.Error(2)
 	}
