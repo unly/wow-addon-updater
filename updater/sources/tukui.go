@@ -12,38 +12,16 @@ import (
 	"github.com/unly/wow-addon-updater/util"
 )
 
-type tukuiAPI interface {
-	GetClassicAddon(id int) (tukui.Addon, *http.Response, error)
-	GetRetailAddon(id int) (tukui.Addon, *http.Response, error)
-	GetTukUI() (tukui.Addon, *http.Response, error)
-	GetElvUI() (tukui.Addon, *http.Response, error)
-}
-
-type tukuiWrapper struct {
-	client *tukui.Client
-}
-
-func (t *tukuiWrapper) GetClassicAddon(id int) (tukui.Addon, *http.Response, error) {
-	return t.client.ClassicAddons.GetAddon(id)
-}
-
-func (t *tukuiWrapper) GetRetailAddon(id int) (tukui.Addon, *http.Response, error) {
-	return t.client.RetailAddons.GetAddon(id)
-}
-
-func (t *tukuiWrapper) GetTukUI() (tukui.Addon, *http.Response, error) {
-	return t.client.RetailAddons.GetTukUI()
-}
-
-func (t *tukuiWrapper) GetElvUI() (tukui.Addon, *http.Response, error) {
-	return t.client.RetailAddons.GetElvUI()
-}
-
 type tukUISource struct {
 	*source
-	api     tukuiAPI
+	classic tukuiAPI
+	retail  tukuiAPI
 	idRegex *regexp.Regexp
 	uiRegex *regexp.Regexp
+}
+
+type tukuiAPI interface {
+	tukui.AddonClient
 }
 
 // NewTukUISource returns a pointer to a newly created TukUISource.
@@ -52,11 +30,12 @@ func NewTukUISource() updater.UpdateSource {
 }
 
 func newTukUISource() *tukUISource {
+	client := tukui.NewClient(nil)
+
 	return &tukUISource{
-		source: newSource(regexp.MustCompile(`^(https?://)?(www\.)?tukui\.org/((classic-)?addons\.php\?id=[0-9]+)|(download\.php\?ui=(tukui|elvui))$`), "tukui"),
-		api: &tukuiWrapper{
-			client: tukui.NewClient(nil),
-		},
+		source:  newSource(regexp.MustCompile(`^(https?://)?(www\.)?tukui\.org/((classic-)?addons\.php\?id=[0-9]+)|(download\.php\?ui=(tukui|elvui))$`), "tukui"),
+		classic: client.ClassicAddons,
+		retail:  client.RetailAddons,
 		idRegex: regexp.MustCompile(`id=[0-9]+`),
 		uiRegex: regexp.MustCompile(`ui=.+`),
 	}
@@ -99,10 +78,10 @@ func (t *tukUISource) getUIAddon(url string) (tukui.Addon, error) {
 
 	switch string(uiRunes[3:]) {
 	case "tukui":
-		tukui, resp, err := t.api.GetTukUI()
+		tukui, resp, err := t.retail.GetTukUI()
 		return tukui, checkHTTPResponse(resp, err)
 	case "elvui":
-		elvui, resp, err := t.api.GetElvUI()
+		elvui, resp, err := t.retail.GetElvUI()
 		return elvui, checkHTTPResponse(resp, err)
 	default:
 		return tukui.Addon{}, fmt.Errorf("given tukui.org ui addon link %s is not supported", url)
@@ -124,9 +103,9 @@ func (t *tukUISource) getRegularAddon(url string) (tukui.Addon, error) {
 
 	var resp *http.Response
 	if strings.Contains(url, "classic-") {
-		addon, resp, err = t.api.GetClassicAddon(id)
+		addon, resp, err = t.classic.GetAddon(id)
 	} else {
-		addon, resp, err = t.api.GetRetailAddon(id)
+		addon, resp, err = t.retail.GetAddon(id)
 	}
 
 	return addon, checkHTTPResponse(resp, err)

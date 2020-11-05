@@ -10,11 +10,12 @@ import (
 
 	"github.com/google/go-github/v32/github"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/unly/wow-addon-updater/updater/sources/mocks"
 	"github.com/unly/wow-addon-updater/util/tests/helpers"
 )
 
-func Test_getLatestRelease(t *testing.T) {
+func Test_getGetLatestRelease(t *testing.T) {
 	tests := []struct {
 		setup         func() *githubSource
 		addonURL      string
@@ -24,9 +25,9 @@ func Test_getLatestRelease(t *testing.T) {
 		{
 			setup: func() *githubSource {
 				source := newGitHubSource()
-				m := &mocks.MockLatestReleaser{}
-				m.On("LatestRelease", "owner", "addon").Return(nil, nil, errors.New("i'm an error"))
-				source.client = m
+				m := &mocks.MockGitHubAPI{}
+				m.On("GetLatestRelease", mock.Anything, "owner", "addon").Return(nil, nil, errors.New("i'm an error"))
+				source.api = m
 				return source
 			},
 			addonURL:      "https://github.com/owner/addon",
@@ -36,12 +37,14 @@ func Test_getLatestRelease(t *testing.T) {
 		{
 			setup: func() *githubSource {
 				source := newGitHubSource()
-				m := &mocks.MockLatestReleaser{}
-				resp := &http.Response{
-					StatusCode: http.StatusBadRequest,
+				m := &mocks.MockGitHubAPI{}
+				resp := &github.Response{
+					Response: &http.Response{
+						StatusCode: http.StatusBadRequest,
+					},
 				}
-				m.On("LatestRelease", "owner", "addon").Return(nil, resp, nil)
-				source.client = m
+				m.On("GetLatestRelease", mock.Anything, "owner", "addon").Return(nil, resp, nil)
+				source.api = m
 				return source
 			},
 			addonURL:      "https://github.com/owner/addon",
@@ -51,12 +54,14 @@ func Test_getLatestRelease(t *testing.T) {
 		{
 			setup: func() *githubSource {
 				source := newGitHubSource()
-				m := &mocks.MockLatestReleaser{}
-				resp := &http.Response{
-					StatusCode: http.StatusInternalServerError,
+				m := &mocks.MockGitHubAPI{}
+				resp := &github.Response{
+					Response: &http.Response{
+						StatusCode: http.StatusInternalServerError,
+					},
 				}
-				m.On("LatestRelease", "owner", "addon").Return(nil, resp, nil)
-				source.client = m
+				m.On("GetLatestRelease", mock.Anything, "owner", "addon").Return(nil, resp, nil)
+				source.api = m
 				return source
 			},
 			addonURL:      "https://github.com/owner/addon",
@@ -66,16 +71,18 @@ func Test_getLatestRelease(t *testing.T) {
 		{
 			setup: func() *githubSource {
 				source := newGitHubSource()
-				m := &mocks.MockLatestReleaser{}
-				resp := &http.Response{
-					StatusCode: http.StatusOK,
+				m := &mocks.MockGitHubAPI{}
+				resp := &github.Response{
+					Response: &http.Response{
+						StatusCode: http.StatusOK,
+					},
 				}
 				release := &github.RepositoryRelease{
 					TagName: stringPtr("1.2.3"),
 					Name:    stringPtr("addon"),
 				}
-				m.On("LatestRelease", "owner", "addon").Return(release, resp, nil)
-				source.client = m
+				m.On("GetLatestRelease", mock.Anything, "owner", "addon").Return(release, resp, nil)
+				source.api = m
 				return source
 			},
 			addonURL: "https://github.com/owner/addon",
@@ -192,15 +199,17 @@ func Test_GetLatestVersion(t *testing.T) {
 		{
 			setup: func() *githubSource {
 				source := newGitHubSource()
-				m := &mocks.MockLatestReleaser{}
-				resp := &http.Response{
-					StatusCode: http.StatusOK,
+				m := &mocks.MockGitHubAPI{}
+				resp := &github.Response{
+					Response: &http.Response{
+						StatusCode: http.StatusOK,
+					},
 				}
 				release := &github.RepositoryRelease{
 					TagName: stringPtr("1.2.3"),
 				}
-				m.On("LatestRelease", "owner", "addon").Return(release, resp, nil)
-				source.client = m
+				m.On("GetLatestRelease", mock.Anything, "owner", "addon").Return(release, resp, nil)
+				source.api = m
 				return source
 			},
 			addonURL:      "github.com/owner/addon",
@@ -210,13 +219,15 @@ func Test_GetLatestVersion(t *testing.T) {
 		{
 			setup: func() *githubSource {
 				source := newGitHubSource()
-				m := &mocks.MockLatestReleaser{}
-				resp := &http.Response{
-					StatusCode: http.StatusOK,
+				m := &mocks.MockGitHubAPI{}
+				resp := &github.Response{
+					Response: &http.Response{
+						StatusCode: http.StatusOK,
+					},
 				}
 				release := &github.RepositoryRelease{}
-				m.On("LatestRelease", "owner", "addon").Return(release, resp, nil)
-				source.client = m
+				m.On("GetLatestRelease", mock.Anything, "owner", "addon").Return(release, resp, nil)
+				source.api = m
 				return source
 			},
 			addonURL:      "github.com/owner/addon",
@@ -294,12 +305,14 @@ func Test_DownloadAddon(t *testing.T) {
 		{
 			setup: func() testStruct {
 				source := newGitHubSource()
-				m := &mocks.MockLatestReleaser{}
-				resp := &http.Response{
-					StatusCode: http.StatusBadRequest,
+				m := &mocks.MockGitHubAPI{}
+				resp := &github.Response{
+					Response: &http.Response{
+						StatusCode: http.StatusBadRequest,
+					},
 				}
-				m.On("LatestRelease", "owner", "addon").Return(nil, resp, nil)
-				source.client = m
+				m.On("GetLatestRelease", mock.Anything, "owner", "addon").Return(nil, resp, nil)
+				source.api = m
 
 				return testStruct{
 					source:        source,
@@ -316,16 +329,18 @@ func Test_DownloadAddon(t *testing.T) {
 				server := httptest.NewServer(mux)
 
 				source := newGitHubSource()
-				m := &mocks.MockLatestReleaser{}
-				resp := &http.Response{
-					StatusCode: http.StatusOK,
+				m := &mocks.MockGitHubAPI{}
+				resp := &github.Response{
+					Response: &http.Response{
+						StatusCode: http.StatusOK,
+					},
 				}
 				release := &github.RepositoryRelease{
 					TagName:    stringPtr("1.2.3"),
 					ZipballURL: stringPtr(server.URL + "/download/addon"),
 				}
-				m.On("LatestRelease", "owner", "addon").Return(release, resp, nil)
-				source.client = m
+				m.On("GetLatestRelease", mock.Anything, "owner", "addon").Return(release, resp, nil)
+				source.api = m
 
 				mux.HandleFunc("/download/addon", func(w http.ResponseWriter, r *http.Request) {
 					assert.Equal(t, http.MethodGet, r.Method)
@@ -355,9 +370,11 @@ func Test_DownloadAddon(t *testing.T) {
 				server := httptest.NewServer(mux)
 
 				source := newGitHubSource()
-				m := &mocks.MockLatestReleaser{}
-				resp := &http.Response{
-					StatusCode: http.StatusOK,
+				m := &mocks.MockGitHubAPI{}
+				resp := &github.Response{
+					Response: &http.Response{
+						StatusCode: http.StatusOK,
+					},
 				}
 				release := &github.RepositoryRelease{
 					TagName:    stringPtr("1.2.3"),
@@ -366,8 +383,8 @@ func Test_DownloadAddon(t *testing.T) {
 						{},
 					},
 				}
-				m.On("LatestRelease", "owner", "addon").Return(release, resp, nil)
-				source.client = m
+				m.On("GetLatestRelease", mock.Anything, "owner", "addon").Return(release, resp, nil)
+				source.api = m
 
 				mux.HandleFunc("/download/addon", func(w http.ResponseWriter, r *http.Request) {
 					assert.Equal(t, http.MethodGet, r.Method)
@@ -397,16 +414,18 @@ func Test_DownloadAddon(t *testing.T) {
 				server := httptest.NewServer(mux)
 
 				source := newGitHubSource()
-				m := &mocks.MockLatestReleaser{}
-				resp := &http.Response{
-					StatusCode: http.StatusOK,
+				m := &mocks.MockGitHubAPI{}
+				resp := &github.Response{
+					Response: &http.Response{
+						StatusCode: http.StatusOK,
+					},
 				}
 				release := &github.RepositoryRelease{
 					TagName:    stringPtr("1.2.3"),
 					ZipballURL: stringPtr(server.URL + "/download/addon"),
 				}
-				m.On("LatestRelease", "owner", "addon").Return(release, resp, nil)
-				source.client = m
+				m.On("GetLatestRelease", mock.Anything, "owner", "addon").Return(release, resp, nil)
+				source.api = m
 
 				mux.HandleFunc("/download/addon", func(w http.ResponseWriter, r *http.Request) {
 					assert.Equal(t, http.MethodGet, r.Method)
@@ -436,9 +455,11 @@ func Test_DownloadAddon(t *testing.T) {
 				server := httptest.NewServer(mux)
 
 				source := newGitHubSource()
-				m := &mocks.MockLatestReleaser{}
-				resp := &http.Response{
-					StatusCode: http.StatusOK,
+				m := &mocks.MockGitHubAPI{}
+				resp := &github.Response{
+					Response: &http.Response{
+						StatusCode: http.StatusOK,
+					},
 				}
 				release := &github.RepositoryRelease{
 					TagName:    stringPtr("1.2.3"),
@@ -450,8 +471,8 @@ func Test_DownloadAddon(t *testing.T) {
 						},
 					},
 				}
-				m.On("LatestRelease", "owner", "addon").Return(release, resp, nil)
-				source.client = m
+				m.On("GetLatestRelease", mock.Anything, "owner", "addon").Return(release, resp, nil)
+				source.api = m
 
 				mux.HandleFunc("/download/asset", func(w http.ResponseWriter, r *http.Request) {
 					assert.Equal(t, http.MethodGet, r.Method)
@@ -481,9 +502,11 @@ func Test_DownloadAddon(t *testing.T) {
 				server := httptest.NewServer(mux)
 
 				source := newGitHubSource()
-				m := &mocks.MockLatestReleaser{}
-				resp := &http.Response{
-					StatusCode: http.StatusOK,
+				m := &mocks.MockGitHubAPI{}
+				resp := &github.Response{
+					Response: &http.Response{
+						StatusCode: http.StatusOK,
+					},
 				}
 				release := &github.RepositoryRelease{
 					TagName:    stringPtr("1.2.3"),
@@ -495,8 +518,8 @@ func Test_DownloadAddon(t *testing.T) {
 						},
 					},
 				}
-				m.On("LatestRelease", "owner", "addon").Return(release, resp, nil)
-				source.client = m
+				m.On("GetLatestRelease", mock.Anything, "owner", "addon").Return(release, resp, nil)
+				source.api = m
 
 				mux.HandleFunc("/download/addon", func(w http.ResponseWriter, r *http.Request) {
 					assert.Equal(t, http.MethodGet, r.Method)
@@ -529,16 +552,18 @@ func Test_DownloadAddon(t *testing.T) {
 				server := httptest.NewServer(mux)
 
 				source := newGitHubSource()
-				m := &mocks.MockLatestReleaser{}
-				resp := &http.Response{
-					StatusCode: http.StatusOK,
+				m := &mocks.MockGitHubAPI{}
+				resp := &github.Response{
+					Response: &http.Response{
+						StatusCode: http.StatusOK,
+					},
 				}
 				release := &github.RepositoryRelease{
 					TagName:    stringPtr("1.2.3"),
 					ZipballURL: stringPtr(server.URL + "/download/addon"),
 				}
-				m.On("LatestRelease", "owner", "addon").Return(release, resp, nil)
-				source.client = m
+				m.On("GetLatestRelease", mock.Anything, "owner", "addon").Return(release, resp, nil)
+				source.api = m
 
 				mux.HandleFunc("/download/addon", func(w http.ResponseWriter, r *http.Request) {
 					assert.Equal(t, http.MethodGet, r.Method)

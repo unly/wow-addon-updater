@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -15,22 +14,13 @@ import (
 	"github.com/unly/wow-addon-updater/util"
 )
 
-type latestReleaser interface {
-	LatestRelease(owner, repo string) (*github.RepositoryRelease, *http.Response, error)
-}
-
-type githubWrapper struct {
-	client *github.Client
-}
-
-func (w *githubWrapper) LatestRelease(owner, repo string) (*github.RepositoryRelease, *http.Response, error) {
-	release, resp, err := w.client.Repositories.GetLatestRelease(context.Background(), owner, repo)
-	return release, resp.Response, err
+type githubAPI interface {
+	GetLatestRelease(ctx context.Context, owner, repo string) (*github.RepositoryRelease, *github.Response, error)
 }
 
 type githubSource struct {
 	*source
-	client    latestReleaser
+	api       githubAPI
 	repoRegex *regexp.Regexp
 }
 
@@ -41,10 +31,8 @@ func NewGitHubSource() updater.UpdateSource {
 
 func newGitHubSource() *githubSource {
 	return &githubSource{
-		source: newSource(regexp.MustCompile(`^(https?://)?github\.com/([a-zA-Z0-9]|-)+/([a-zA-Z0-9]|-)+/?$`), "github"),
-		client: &githubWrapper{
-			client: github.NewClient(nil),
-		},
+		source:    newSource(regexp.MustCompile(`^(https?://)?github\.com/([a-zA-Z0-9]|-)+/([a-zA-Z0-9]|-)+/?$`), "github"),
+		api:       github.NewClient(nil).Repositories,
 		repoRegex: regexp.MustCompile(`/([a-zA-Z0-9]|-)+/([a-zA-Z0-9]|-)+`),
 	}
 }
@@ -127,8 +115,11 @@ func (g *githubSource) getLatestRelease(addonURL string) (*github.RepositoryRele
 		return nil, err
 	}
 
-	release, resp, err := g.client.LatestRelease(organization, repo)
-	if err := checkHTTPResponse(resp, err); err != nil {
+	release, resp, err := g.api.GetLatestRelease(context.Background(), organization, repo)
+	if err != nil {
+		return nil, err
+	}
+	if err := checkHTTPResponse(resp.Response, err); err != nil {
 		return nil, err
 	}
 
