@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"regexp"
 )
 
@@ -13,10 +14,15 @@ type source struct {
 	tempDir string
 }
 
-func newSource(regex *regexp.Regexp, name string) *source {
+func newSource(regex *regexp.Regexp) *source {
+	path, err := ioutil.TempDir("", "wow-updater")
+	if err != nil {
+		panic(err)
+	}
+
 	return &source{
 		regex:   regex,
-		tempDir: createTempDir(name),
+		tempDir: path,
 	}
 }
 
@@ -42,13 +48,8 @@ func (s *source) downloadZip(url string) (string, error) {
 	return file.Name(), err
 }
 
-func createTempDir(postfix string) string {
-	path, err := ioutil.TempDir("", "wow-updater-"+postfix)
-	if err != nil {
-		panic(err)
-	}
-
-	return path
+func (s *source) Close() {
+	_ = os.RemoveAll(s.tempDir)
 }
 
 func checkHTTPResponse(resp *http.Response, err error) error {

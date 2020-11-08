@@ -33,7 +33,7 @@ func newTukUISource() *tukUISource {
 	client := tukui.NewClient(nil)
 
 	return &tukUISource{
-		source:  newSource(regexp.MustCompile(`^(https?://)?(www\.)?tukui\.org/((classic-)?addons\.php\?id=[0-9]+)|(download\.php\?ui=(tukui|elvui))$`), "tukui"),
+		source:  newSource(regexp.MustCompile(`^(https?://)?(www\.)?tukui\.org/((classic-)?addons\.php\?id=[0-9]+)|(download\.php\?ui=(tukui|elvui))$`)),
 		classic: client.ClassicAddons,
 		retail:  client.RetailAddons,
 		idRegex: regexp.MustCompile(`id=[0-9]+`),

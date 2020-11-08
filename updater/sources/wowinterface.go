@@ -25,7 +25,7 @@ func NewWoWInterfaceSource() updater.UpdateSource {
 // newWoWInterfaceSource returns a pointer to a newly created WoWInterfaceSource.
 func newWoWInterfaceSource() *woWInterfaceSource {
 	return &woWInterfaceSource{
-		source:  newSource(regexp.MustCompile(`^(https?://)?(www\.)?wowinterface\.com/downloads/info.+\.html$`), "wowinterface"),
+		source:  newSource(regexp.MustCompile(`^(https?://)?(www\.)?wowinterface\.com/downloads/info.+\.html$`)),
 		baseURL: "https://www.wowinterface.com",
 	}
 }
