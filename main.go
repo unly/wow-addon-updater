@@ -57,4 +57,5 @@ func main() {
 	log.Println("enjoy the updates!")
 	log.Println("press Enter to quit")
 	fmt.Scanln()
+	updater.Close()
 }

@@ -36,6 +36,8 @@ type UpdateSource interface {
 	GetLatestVersion(addonURL string) (string, error)
 	// DownloadAddon downloads and extracts the addon to the given directory
 	DownloadAddon(addonURL, dir string) error
+	// Close shuts down the sources to the respective addon sources and cleans up temp directories
+	Close()
 }
 
 type addon struct {
@@ -97,6 +99,13 @@ func (u *Updater) UpdateAddons() error {
 	}
 
 	return nil
+}
+
+// Close shuts all open connections and removes temporary directories
+func (u *Updater) Close() {
+	for _, s := range u.sources {
+		s.Close()
+	}
 }
 
 func (g *gameUpdater) updateAddons(sources []UpdateSource) error {

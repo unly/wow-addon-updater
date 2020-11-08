@@ -31,7 +31,7 @@ func NewGitHubSource() updater.UpdateSource {
 
 func newGitHubSource() *githubSource {
 	return &githubSource{
-		source:    newSource(regexp.MustCompile(`^(https?://)?github\.com/([a-zA-Z0-9]|-)+/([a-zA-Z0-9]|-)+/?$`), "github"),
+		source:    newSource(regexp.MustCompile(`^(https?://)?github\.com/([a-zA-Z0-9]|-)+/([a-zA-Z0-9]|-)+/?$`)),
 		api:       github.NewClient(nil).Repositories,
 		repoRegex: regexp.MustCompile(`/([a-zA-Z0-9]|-)+/([a-zA-Z0-9]|-)+`),
 	}
