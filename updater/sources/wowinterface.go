@@ -7,23 +7,31 @@ import (
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/unly/wow-addon-updater/updater"
 	"github.com/unly/wow-addon-updater/util"
 )
 
-// WoWInterfaceSource is the source for addons and UIs hosted on wowinterface.com
-type WoWInterfaceSource struct {
+// woWInterfaceSource is the source for addons and UIs hosted on wowinterface.com
+type woWInterfaceSource struct {
 	*source
+	baseURL string
 }
 
-// NewWoWInterfaceSource returns a pointer to a newly created WoWInterfaceSource.
-func NewWoWInterfaceSource() *WoWInterfaceSource {
-	return &WoWInterfaceSource{
-		source: newSource(regexp.MustCompile(`(https?://)?(www\.)?wowinterface\.com/downloads/info.+\.html`), "wowinterface"),
+//NewWoWInterfaceSource returns a new update source for wowinterface.com
+func NewWoWInterfaceSource() updater.UpdateSource {
+	return newWoWInterfaceSource()
+}
+
+// newWoWInterfaceSource returns a pointer to a newly created WoWInterfaceSource.
+func newWoWInterfaceSource() *woWInterfaceSource {
+	return &woWInterfaceSource{
+		source:  newSource(regexp.MustCompile(`^(https?://)?(www\.)?wowinterface\.com/downloads/info.+\.html$`), "wowinterface"),
+		baseURL: "https://www.wowinterface.com",
 	}
 }
 
 // GetLatestVersion returns the latest version for the given addon URL
-func (w *WoWInterfaceSource) GetLatestVersion(addonURL string) (string, error) {
+func (w *woWInterfaceSource) GetLatestVersion(addonURL string) (string, error) {
 	doc, err := getHTMLPage(addonURL)
 	if err != nil {
 		return "", err
@@ -39,7 +47,7 @@ func (w *WoWInterfaceSource) GetLatestVersion(addonURL string) (string, error) {
 }
 
 // DownloadAddon downloads and unzip the addon from the given URL to the given directory
-func (w *WoWInterfaceSource) DownloadAddon(addonURL, dir string) error {
+func (w *woWInterfaceSource) DownloadAddon(addonURL, dir string) error {
 	elems := strings.Split(addonURL, "/")
 	if len(elems) == 0 {
 		return fmt.Errorf("no path to extract from: %s", addonURL)
@@ -48,7 +56,7 @@ func (w *WoWInterfaceSource) DownloadAddon(addonURL, dir string) error {
 	name := elems[len(elems)-1]
 	name = name[4 : len(name)-5]
 
-	doc, err := getHTMLPage(fmt.Sprintf("https://www.wowinterface.com/downloads/download%s", name))
+	doc, err := getHTMLPage(fmt.Sprintf("%s/downloads/download%s", w.baseURL, name))
 	if err != nil {
 		return err
 	}
