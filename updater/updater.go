@@ -101,13 +101,6 @@ func (u *Updater) UpdateAddons() error {
 	return nil
 }
 
-// Close shuts all open connections and removes temporary directories
-func (u *Updater) Close() {
-	for _, s := range u.sources {
-		s.Close()
-	}
-}
-
 func (g *gameUpdater) updateAddons(sources []UpdateSource) error {
 	for _, addon := range g.config.AddOns {
 		source, err := getSource(sources, addon)
