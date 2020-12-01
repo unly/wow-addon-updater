@@ -8,6 +8,7 @@
 Currently supported AddOn sources:
 * [github.com](https://github.com/)
 * [tukui.org](https://www.tukui.org/)
+* [wowinterface.com](https://www.wowinterface.com)
 
 ## Run the Updater
 
@@ -27,6 +28,7 @@ classic:
     addons:
     - https://www.tukui.org/classic-addons.php?id=1
     - https://github.com/AeroScripts/QuestieDev
+    - https://www.wowinterface.com/downloads/info24608-Hekili.html
 retail:
     path: path/to/retail/interface/directory
     addons: []
