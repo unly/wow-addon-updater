@@ -1,6 +1,7 @@
 package sources
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -11,6 +12,37 @@ import (
 	"github.com/unly/go-tukui"
 	"github.com/unly/wow-addon-updater/updater/sources/mocks"
 	"github.com/unly/wow-addon-updater/util/tests/helpers"
+)
+
+const (
+	tukuiAddonPage string = `
+<!DOCTYPE html>
+<html lang="en-US">
+	<head>
+		<title>Tukui</title>
+	</head>
+	<body class="appear-animate">
+	<ul class="nav nav-tabs tpl-tabs animate">
+		<li class="addons-single in active">
+			<a href="#description" data-toggle="tab">Description</a>
+		</li>
+		<li class="addons-single">
+			<a href="#screenshot" data-toggle="tab">Screenshot</a>
+		</li>
+		<li class="addons-single ">
+			<a href="#changelog" data-toggle="tab">Changelog</a>
+		</li>
+		<li class="addons-single">
+			<a href="#extras" data-toggle="tab">Extras</a>
+		</li>
+	</ul>
+	<div class="tab-pane fade in" id="extras">
+		<p class="extras">The latest version of this addon is <b class="VIP">%s</b> and was uploaded on <b class="VIP">Oct 27, 2020</b> at <b class="VIP">02:17</b>.</p>
+		<p class="extras">This file was last downloaded on <b class="VIP">Dec 09, 2020</b> at <b class="VIP">21:48</b> and has been downloaded <b class="VIP">1572354</b> times.</p>
+	</div>
+	</body>
+</html>
+	`
 )
 
 type addonTest struct {
@@ -186,29 +218,25 @@ func Test_DownloadAddon_TukUI(t *testing.T) {
 		},
 		func() *test {
 			mux := http.NewServeMux()
-			server := httptest.NewServer(mux)
-
-			s := newTukUISource()
-			m := &mocks.MockTukUIAPI{}
-			addon := tukui.Addon{
-				URL: stringPtr(server.URL + "/download/addon"),
-			}
-			resp := &http.Response{
-				StatusCode: http.StatusOK,
-			}
-			m.On("GetAddon", 1).Return(addon, resp, nil)
-			s.classic = m
-			mux.HandleFunc("/download/addon", func(w http.ResponseWriter, r *http.Request) {
+			mux.HandleFunc("/classic-addons.php", func(w http.ResponseWriter, r *http.Request) {
 				assert.Equal(t, http.MethodGet, r.Method)
-				w.WriteHeader(http.StatusInternalServerError)
+				v := r.URL.Query()
+				if v.Get("id") == "1" {
+					w.Write([]byte(fmt.Sprintf(tukuiAddonPage, "1.2.3")))
+					w.WriteHeader(http.StatusOK)
+				} else if v.Get("download") == "1" {
+					w.WriteHeader(http.StatusInternalServerError)
+				}
 			})
+			server := httptest.NewServer(mux)
+			s := newTukUISource()
 			teardown := func() {
 				server.Close()
 				helpers.DeleteDir(t, s.tempDir)()
 			}
 			return &test{
 				source:        s,
-				addonURL:      "https://www.tukui.org/classic-addons.php?id=1",
+				addonURL:      server.URL + "/classic-addons.php?id=1",
 				dir:           "",
 				errorExpected: true,
 				teardown:      teardown,
@@ -216,25 +244,22 @@ func Test_DownloadAddon_TukUI(t *testing.T) {
 		},
 		func() *test {
 			mux := http.NewServeMux()
-			server := httptest.NewServer(mux)
-			s := newTukUISource()
-			m := &mocks.MockTukUIAPI{}
-			addon := tukui.Addon{
-				URL: stringPtr(server.URL + "/download/addon"),
-			}
-			resp := &http.Response{
-				StatusCode: http.StatusOK,
-			}
-			m.On("GetAddon", 1).Return(addon, resp, nil)
-			s.classic = m
-			mux.HandleFunc("/download/addon", func(w http.ResponseWriter, r *http.Request) {
+			mux.HandleFunc("/classic-addons.php", func(w http.ResponseWriter, r *http.Request) {
 				assert.Equal(t, http.MethodGet, r.Method)
-				content, err := ioutil.ReadFile(filepath.Join("_tests", "archive1.zip"))
-				assert.NoError(t, err)
-				w.Write(content)
-				w.WriteHeader(http.StatusOK)
+				v := r.URL.Query()
+				if v.Get("id") == "1" {
+					w.Write([]byte(fmt.Sprintf(tukuiAddonPage, "1.2.3")))
+					w.WriteHeader(http.StatusOK)
+				} else if v.Get("download") == "1" {
+					content, err := ioutil.ReadFile(filepath.Join("_tests", "archive1.zip"))
+					assert.NoError(t, err)
+					w.Write(content)
+					w.WriteHeader(http.StatusOK)
+				}
 			})
+			server := httptest.NewServer(mux)
 			dir := helpers.TempDir(t)
+			s := newTukUISource()
 			teardown := func() {
 				server.Close()
 				helpers.DeleteDir(t, s.tempDir)()
@@ -242,7 +267,7 @@ func Test_DownloadAddon_TukUI(t *testing.T) {
 			}
 			return &test{
 				source:        s,
-				addonURL:      "https://www.tukui.org/classic-addons.php?id=1",
+				addonURL:      server.URL + "/classic-addons.php?id=1",
 				dir:           dir,
 				errorExpected: false,
 				teardown:      teardown,
@@ -396,70 +421,85 @@ func getIDAddonURLs(t *testing.T) []func() *addonTest {
 		},
 		func() *addonTest {
 			s := newTukUISource()
-			m := &mocks.MockTukUIAPI{}
+			website := fmt.Sprintf(tukuiAddonPage, "1.2.3")
+			mux := http.NewServeMux()
+			mux.HandleFunc("/classic-addons.php", func(rw http.ResponseWriter, r *http.Request) {
+				rw.Write([]byte(website))
+				rw.WriteHeader(http.StatusOK)
+			})
+			server := httptest.NewServer(mux)
 			addon := tukui.Addon{
 				Version: stringPtr("1.2.3"),
+				URL:     stringPtr(server.URL + "/classic-addons.php?download=1"),
 			}
-			resp := &http.Response{
-				StatusCode: http.StatusOK,
-			}
-			m.On("GetAddon", 1).Return(addon, resp, nil)
-			s.classic = m
 			return &addonTest{
 				source:        s,
-				addonURL:      "tukui.org/classic-addons.php?id=1",
+				addonURL:      server.URL + "/classic-addons.php?id=1",
 				want:          addon,
 				errorExpected: false,
-				teardown:      helpers.DeleteDir(t, s.tempDir),
+				teardown: func() {
+					helpers.DeleteDir(t, s.tempDir)
+					server.Close()
+				},
 			}
 		},
 		func() *addonTest {
 			s := newTukUISource()
-			m := &mocks.MockTukUIAPI{}
-			resp := &http.Response{
-				StatusCode: http.StatusBadRequest,
-			}
-			m.On("GetAddon", 1).Return(tukui.Addon{}, resp, nil)
-			s.classic = m
+			mux := http.NewServeMux()
+			mux.HandleFunc("/addons.php", func(rw http.ResponseWriter, r *http.Request) {
+				rw.Write([]byte("not a website"))
+				rw.WriteHeader(http.StatusOK)
+			})
+			server := httptest.NewServer(mux)
 			return &addonTest{
 				source:        s,
-				addonURL:      "tukui.org/classic-addons.php?id=1",
+				addonURL:      server.URL + "/classic-addons.php?id=1",
 				errorExpected: true,
-				teardown:      helpers.DeleteDir(t, s.tempDir),
+				teardown: func() {
+					helpers.DeleteDir(t, s.tempDir)
+					server.Close()
+				},
 			}
 		},
 		func() *addonTest {
 			s := newTukUISource()
-			m := &mocks.MockTukUIAPI{}
+			website := fmt.Sprintf(tukuiAddonPage, "1.2.3")
+			mux := http.NewServeMux()
+			mux.HandleFunc("/addons.php", func(rw http.ResponseWriter, r *http.Request) {
+				rw.Write([]byte(website))
+				rw.WriteHeader(http.StatusOK)
+			})
+			server := httptest.NewServer(mux)
 			addon := tukui.Addon{
 				Version: stringPtr("1.2.3"),
+				URL:     stringPtr(server.URL + "/addons.php?download=2"),
 			}
-			resp := &http.Response{
-				StatusCode: http.StatusOK,
-			}
-			m.On("GetAddon", 2).Return(addon, resp, nil)
-			s.retail = m
 			return &addonTest{
 				source:        s,
-				addonURL:      "tukui.org/addons.php?id=2",
+				addonURL:      server.URL + "/addons.php?id=2",
 				want:          addon,
 				errorExpected: false,
-				teardown:      helpers.DeleteDir(t, s.tempDir),
+				teardown: func() {
+					helpers.DeleteDir(t, s.tempDir)
+					server.Close()
+				},
 			}
 		},
 		func() *addonTest {
 			s := newTukUISource()
-			m := &mocks.MockTukUIAPI{}
-			resp := &http.Response{
-				StatusCode: http.StatusBadRequest,
-			}
-			m.On("GetAddon", 2).Return(tukui.Addon{}, resp, nil)
-			s.retail = m
+			mux := http.NewServeMux()
+			mux.HandleFunc("/addons.php", func(rw http.ResponseWriter, r *http.Request) {
+				rw.WriteHeader(http.StatusBadRequest)
+			})
+			server := httptest.NewServer(mux)
 			return &addonTest{
 				source:        s,
-				addonURL:      "tukui.org/addons.php?id=2",
+				addonURL:      server.URL + "/addons.php?id=2",
 				errorExpected: true,
-				teardown:      helpers.DeleteDir(t, s.tempDir),
+				teardown: func() {
+					helpers.DeleteDir(t, s.tempDir)
+					server.Close()
+				},
 			}
 		},
 	}
