@@ -2,9 +2,7 @@ package sources
 
 import (
 	"fmt"
-	"net/http"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/unly/go-tukui"
@@ -89,26 +87,24 @@ func (t *tukUISource) getUIAddon(url string) (tukui.Addon, error) {
 }
 
 func (t *tukUISource) getRegularAddon(url string) (tukui.Addon, error) {
-	var addon tukui.Addon
+	addon := tukui.Addon{}
 
-	idRunes := []rune(t.idRegex.FindString(url))
-	if len(idRunes) < 3 {
-		return addon, fmt.Errorf("failed to extract the id= parameter from %s. no id found", url)
-	}
-
-	id, err := strconv.Atoi(string(idRunes[3:]))
+	doc, err := getHTMLPage(url)
 	if err != nil {
 		return addon, err
 	}
 
-	var resp *http.Response
-	if strings.Contains(url, "classic-") {
-		addon, resp, err = t.classic.GetAddon(id)
-	} else {
-		addon, resp, err = t.retail.GetAddon(id)
+	s := doc.Find("#extras .extras:nth-of-type(1) > b.VIP:nth-of-type(1)")
+	if s == nil || len(s.Text()) == 0 {
+		return addon, fmt.Errorf("failed to query %s page for a version", url)
 	}
 
-	return addon, checkHTTPResponse(resp, err)
+	version := s.Text()
+	addon.Version = &version
+	downloadURL := strings.Replace(url, "id", "download", 1)
+	addon.URL = &downloadURL
+
+	return addon, nil
 }
 
 // DownloadAddon downloads and unzip the addon from the given URL to the given directory
