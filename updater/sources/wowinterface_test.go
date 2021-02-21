@@ -2,9 +2,9 @@ package sources
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -119,8 +119,8 @@ func Test_getHTMLPage(t *testing.T) {
 			website := getWoWInterfacePage("1.2.3", "")
 			mux := http.NewServeMux()
 			mux.HandleFunc("/addon", func(rw http.ResponseWriter, r *http.Request) {
-				rw.Write([]byte(website))
 				rw.WriteHeader(http.StatusOK)
+				rw.Write([]byte(website))
 			})
 			server := httptest.NewServer(mux)
 			doc, err := goquery.NewDocumentFromReader(strings.NewReader(website))
@@ -167,8 +167,8 @@ func Test_getHTMLPage(t *testing.T) {
 			s := "hello world"
 			mux := http.NewServeMux()
 			mux.HandleFunc("/addon", func(rw http.ResponseWriter, r *http.Request) {
-				rw.Write([]byte(s))
 				rw.WriteHeader(http.StatusOK)
+				rw.Write([]byte(s))
 			})
 			server := httptest.NewServer(mux)
 			doc, err := goquery.NewDocumentFromReader(strings.NewReader(s))
@@ -212,8 +212,8 @@ func Test_GetLatestVersion_WoWInterface(t *testing.T) {
 		func() *getlatestVersionTest {
 			mux := http.NewServeMux()
 			mux.HandleFunc("/addon", func(rw http.ResponseWriter, r *http.Request) {
-				rw.Write([]byte(getWoWInterfacePage("1.2.3", "")))
 				rw.WriteHeader(http.StatusOK)
+				rw.Write([]byte(getWoWInterfacePage("1.2.3", "")))
 			})
 			server := httptest.NewServer(mux)
 
@@ -228,8 +228,8 @@ func Test_GetLatestVersion_WoWInterface(t *testing.T) {
 		func() *getlatestVersionTest {
 			mux := http.NewServeMux()
 			mux.HandleFunc("/addon", func(rw http.ResponseWriter, r *http.Request) {
-				rw.Write([]byte(getWoWInterfacePage("", "")))
 				rw.WriteHeader(http.StatusOK)
+				rw.Write([]byte(getWoWInterfacePage("", "")))
 			})
 			server := httptest.NewServer(mux)
 
@@ -259,8 +259,8 @@ func Test_GetLatestVersion_WoWInterface(t *testing.T) {
 		func() *getlatestVersionTest {
 			mux := http.NewServeMux()
 			mux.HandleFunc("/addon", func(rw http.ResponseWriter, r *http.Request) {
-				rw.Write([]byte(fmt.Sprintf(wowinterfaceAddonPage, "1.2.3", "")))
 				rw.WriteHeader(http.StatusOK)
+				rw.Write([]byte(fmt.Sprintf(wowinterfaceAddonPage, "1.2.3", "")))
 			})
 			server := httptest.NewServer(mux)
 
@@ -275,8 +275,8 @@ func Test_GetLatestVersion_WoWInterface(t *testing.T) {
 		func() *getlatestVersionTest {
 			mux := http.NewServeMux()
 			mux.HandleFunc("/addon", func(rw http.ResponseWriter, r *http.Request) {
-				rw.Write([]byte(fmt.Sprintf(wowinterfaceAddonPageNoVersion, "")))
 				rw.WriteHeader(http.StatusOK)
+				rw.Write([]byte(fmt.Sprintf(wowinterfaceAddonPageNoVersion, "")))
 			})
 			server := httptest.NewServer(mux)
 
@@ -322,10 +322,10 @@ func Test_DownloadAddon_WoWInterface(t *testing.T) {
 			server := httptest.NewServer(mux)
 			mux.HandleFunc("/download/addon", func(w http.ResponseWriter, r *http.Request) {
 				assert.Equal(t, http.MethodGet, r.Method)
-				content, err := ioutil.ReadFile(filepath.Join("_tests", "archive1.zip"))
+				content, err := os.ReadFile(filepath.Join("_tests", "archive1.zip"))
 				assert.NoError(t, err)
-				w.Write(content)
 				w.WriteHeader(http.StatusOK)
+				w.Write(content)
 			})
 			mux.HandleFunc("/downloads/downloadaddon", func(rw http.ResponseWriter, r *http.Request) {
 				assert.Equal(t, http.MethodGet, r.Method)
@@ -354,8 +354,8 @@ func Test_DownloadAddon_WoWInterface(t *testing.T) {
 			server := httptest.NewServer(mux)
 			mux.HandleFunc("/downloads/downloadaddon", func(rw http.ResponseWriter, r *http.Request) {
 				assert.Equal(t, http.MethodGet, r.Method)
-				rw.Write([]byte("Hello World"))
 				rw.WriteHeader(http.StatusOK)
+				rw.Write([]byte("Hello World"))
 			})
 			dir := helpers.TempDir(t)
 			source := newWoWInterfaceSource()
@@ -403,8 +403,8 @@ func Test_DownloadAddon_WoWInterface(t *testing.T) {
 			server := httptest.NewServer(mux)
 			mux.HandleFunc("/downloads/downloadaddon", func(rw http.ResponseWriter, r *http.Request) {
 				assert.Equal(t, http.MethodGet, r.Method)
-				rw.Write([]byte(fmt.Sprintf(wowinterfaceDownloadPage, "not-existing")))
 				rw.WriteHeader(http.StatusOK)
+				rw.Write([]byte(fmt.Sprintf(wowinterfaceDownloadPage, "not-existing")))
 			})
 			dir := helpers.TempDir(t)
 			source := newWoWInterfaceSource()

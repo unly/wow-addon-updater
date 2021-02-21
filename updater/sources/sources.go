@@ -3,7 +3,6 @@ package sources
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"regexp"
@@ -15,7 +14,7 @@ type source struct {
 }
 
 func newSource(regex *regexp.Regexp) *source {
-	path, err := ioutil.TempDir("", "wow-updater")
+	path, err := os.MkdirTemp("", "wow-updater")
 	if err != nil {
 		panic(err)
 	}
@@ -37,7 +36,7 @@ func (s *source) downloadZip(url string) (string, error) {
 	}
 	defer resp.Body.Close()
 
-	file, err := ioutil.TempFile(s.tempDir, "*.zip")
+	file, err := os.CreateTemp(s.tempDir, "*.zip")
 	if err != nil {
 		return "", err
 	}

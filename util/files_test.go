@@ -1,7 +1,6 @@
 package util
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -235,7 +234,7 @@ func Test_WriteToHiddenFile(t *testing.T) {
 			hidden, err := IsHiddenFile(tt.path)
 			assert.NoError(t, err)
 			assert.True(t, hidden)
-			actualBody, err := ioutil.ReadFile(tt.path)
+			actualBody, err := os.ReadFile(tt.path)
 			assert.NoError(t, err, "failed to read in temporary file %s", tt.path)
 			assert.Equal(t, tt.data, actualBody, "WriteToHiddenFile() file content wrong")
 		}

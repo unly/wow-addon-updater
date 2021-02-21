@@ -1,17 +1,16 @@
 package main
 
 import (
-	"github.com/stretchr/testify/mock"
-	"github.com/unly/wow-addon-updater/util"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/unly/wow-addon-updater/updater"
 	"github.com/unly/wow-addon-updater/updater/mocks"
+	"github.com/unly/wow-addon-updater/util"
 	"github.com/unly/wow-addon-updater/util/tests/helpers"
 )
 
@@ -139,7 +138,7 @@ classic:
     - addon1
     - addon2`)
 			file := helpers.TempFile(t, "", content)
-			err := ioutil.WriteFile(file, content, os.FileMode(0666))
+			err := os.WriteFile(file, content, os.FileMode(0666))
 			assert.NoError(t, err)
 
 			return &mainTest{
@@ -166,7 +165,7 @@ classic:
     - addon2`)
 			dir := helpers.TempDir(t)
 			file := helpers.TempFile(t, dir, content)
-			err := ioutil.WriteFile(file, content, os.FileMode(0666))
+			err := os.WriteFile(file, content, os.FileMode(0666))
 			assert.NoError(t, err)
 			oldVersionsPath := versionsPath
 			versionsPath = filepath.Join(dir, ".versions")

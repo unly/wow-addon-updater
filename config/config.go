@@ -1,7 +1,6 @@
 package config
 
 import (
-	"io/ioutil"
 	"os"
 
 	"gopkg.in/yaml.v3"
@@ -27,7 +26,7 @@ type WowConfig struct {
 // Returns an error if not existing.
 func ReadConfig(path string) (Config, error) {
 	var c Config
-	in, err := ioutil.ReadFile(path)
+	in, err := os.ReadFile(path)
 	if err != nil {
 		return c, err
 	}
@@ -45,5 +44,5 @@ func CreateDefaultConfig(path string) error {
 		return err
 	}
 
-	return ioutil.WriteFile(path, out, os.FileMode(0666))
+	return os.WriteFile(path, out, os.FileMode(0666))
 }
