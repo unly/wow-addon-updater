@@ -2,9 +2,9 @@ package sources
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -251,7 +251,7 @@ func Test_DownloadAddon_TukUI(t *testing.T) {
 					w.Write([]byte(fmt.Sprintf(tukuiAddonPage, "1.2.3")))
 					w.WriteHeader(http.StatusOK)
 				} else if v.Get("download") == "1" {
-					content, err := ioutil.ReadFile(filepath.Join("_tests", "archive1.zip"))
+					content, err := os.ReadFile(filepath.Join("_tests", "archive1.zip"))
 					assert.NoError(t, err)
 					w.Write(content)
 					w.WriteHeader(http.StatusOK)

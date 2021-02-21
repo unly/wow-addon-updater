@@ -4,7 +4,6 @@ package util
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -32,7 +31,7 @@ func WriteToHiddenFile(path string, data []byte, perm os.FileMode) error {
 		return fmt.Errorf("the path %s is not valid for a hidden file", path)
 	}
 
-	return ioutil.WriteFile(path, data, perm)
+	return os.WriteFile(path, data, perm)
 }
 
 // IsHiddenFile returns whether the given file path is a hidden file or not.

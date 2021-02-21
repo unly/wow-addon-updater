@@ -2,9 +2,9 @@ package sources
 
 import (
 	"errors"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -523,7 +523,7 @@ func Test_DownloadAddon(t *testing.T) {
 
 				mux.HandleFunc("/download/addon", func(w http.ResponseWriter, r *http.Request) {
 					assert.Equal(t, http.MethodGet, r.Method)
-					content, err := ioutil.ReadFile(filepath.Join("_tests", "archive1.zip"))
+					content, err := os.ReadFile(filepath.Join("_tests", "archive1.zip"))
 					assert.NoError(t, err)
 					w.Write(content)
 					w.WriteHeader(http.StatusOK)

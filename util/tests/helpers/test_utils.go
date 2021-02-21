@@ -1,7 +1,6 @@
 package helpers
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -30,14 +29,14 @@ func NoopTeardown() TearDown {
 
 func TempDir(t *testing.T) string {
 	t.Helper()
-	dir, err := ioutil.TempDir("", "*")
+	dir, err := os.MkdirTemp("", "*")
 	assert.NoError(t, err, "failed to create a temp directory")
 	return dir
 }
 
 func TempFile(t *testing.T, dir string, content []byte) string {
 	t.Helper()
-	f, err := ioutil.TempFile(dir, "*")
+	f, err := os.CreateTemp(dir, "*")
 	assert.NoError(t, err, "failed to create temporary file")
 	defer f.Close()
 	_, err = f.Write(content)

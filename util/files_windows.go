@@ -3,7 +3,6 @@
 package util
 
 import (
-	"io/ioutil"
 	"os"
 	"syscall"
 )
@@ -22,7 +21,7 @@ func WriteToHiddenFile(path string, data []byte, perm os.FileMode) error {
 		}
 	}
 
-	err := ioutil.WriteFile(path, data, perm)
+	err := os.WriteFile(path, data, perm)
 	if err != nil {
 		return err
 	}

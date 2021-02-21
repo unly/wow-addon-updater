@@ -3,7 +3,7 @@ package updater
 import (
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"os"
 	"regexp"
 	"testing"
 
@@ -12,7 +12,6 @@ import (
 	"github.com/unly/wow-addon-updater/updater/mocks"
 	"github.com/unly/wow-addon-updater/util"
 	"github.com/unly/wow-addon-updater/util/tests/helpers"
-
 	"gopkg.in/yaml.v3"
 )
 
@@ -215,7 +214,7 @@ func Test_saveVersionsFile(t *testing.T) {
 			assert.Error(t, err)
 		} else {
 			assert.NoError(t, err)
-			out, err := ioutil.ReadFile(tt.updater.versionFile)
+			out, err := os.ReadFile(tt.updater.versionFile)
 			assert.NoError(t, err)
 			var actual versions
 			err = yaml.Unmarshal(out, &actual)

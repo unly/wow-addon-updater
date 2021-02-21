@@ -3,7 +3,6 @@
 package util
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -24,7 +23,7 @@ func Test_HideFile(t *testing.T) {
 		func() *hideFileTest {
 			dir := helpers.TempDir(t)
 			f := filepath.Join(dir, "test1")
-			err := ioutil.WriteFile(f, []byte{}, os.FileMode(0666))
+			err := os.WriteFile(f, []byte{}, os.FileMode(0666))
 			assert.NoError(t, err)
 
 			return &hideFileTest{
@@ -36,7 +35,7 @@ func Test_HideFile(t *testing.T) {
 		func() *hideFileTest {
 			dir := helpers.TempDir(t)
 			f := filepath.Join(dir, ".test2")
-			err := ioutil.WriteFile(f, []byte{}, os.FileMode(0666))
+			err := os.WriteFile(f, []byte{}, os.FileMode(0666))
 			assert.NoError(t, err)
 			err = setFileAttribute(f, syscall.FILE_ATTRIBUTE_HIDDEN)
 			assert.NoError(t, err)

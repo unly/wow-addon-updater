@@ -2,7 +2,6 @@ package updater
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"regexp"
@@ -184,7 +183,7 @@ func readVersionsFile(path string) (versions, error) {
 		return vers, nil
 	}
 
-	yamlFile, err := ioutil.ReadFile(path)
+	yamlFile, err := os.ReadFile(path)
 	if err != nil {
 		return vers, err
 	}
