@@ -26,6 +26,8 @@ type gameUpdater struct {
 	versions map[string]addon
 }
 
+//go:generate go run github.com/vektra/mockery/v2 --case=underscore  --name=UpdateSource --structname=MockUpdateSource
+
 // UpdateSource can be a possible source to get WoW addons from
 type UpdateSource interface {
 	// GetURLRegex returns a regular expression that matches a URL the source can handle

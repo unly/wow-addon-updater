@@ -18,6 +18,8 @@ type tukUISource struct {
 	uiRegex *regexp.Regexp
 }
 
+//go:generate go run github.com/vektra/mockery/v2 --case=underscore  --name=tukuiAPI --structname=MockTukUIAPI
+
 type tukuiAPI interface {
 	tukui.AddonClient
 }
