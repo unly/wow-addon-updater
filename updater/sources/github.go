@@ -14,6 +14,8 @@ import (
 	"github.com/unly/wow-addon-updater/util"
 )
 
+//go:generate go run github.com/vektra/mockery/v2 --case=underscore  --name=githubAPI --structname=MockGitHubAPI
+
 type githubAPI interface {
 	GetLatestRelease(ctx context.Context, owner, repo string) (*github.RepositoryRelease, *github.Response, error)
 }
