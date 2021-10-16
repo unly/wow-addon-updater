@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/google/go-github/v32/github"
+	"github.com/google/go-github/v38/github"
 	"github.com/unly/wow-addon-updater/updater"
 	"github.com/unly/wow-addon-updater/util"
 )
