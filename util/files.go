@@ -20,7 +20,7 @@ func FileExists(filename string) bool {
 // from https://golangcode.com/unzip-files-in-go/
 func Unzip(src string, dest string) ([]string, error) {
 
-	var filenames []string
+	filenames := make([]string, 0)
 
 	r, err := zip.OpenReader(src)
 	if err != nil {
