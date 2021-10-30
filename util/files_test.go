@@ -12,327 +12,196 @@ import (
 func setFileReadOnly(t *testing.T, path string) {
 	t.Helper()
 	err := os.Chmod(path, os.FileMode(0400))
-	assert.NoError(t, err)
+	if err != nil {
+		assert.FailNow(t, "failed to set read only flag", err)
+	}
 }
 
 func setFileWriteable(t *testing.T, path string) {
 	t.Helper()
 	err := os.Chmod(path, os.FileMode(0600))
-	assert.NoError(t, err)
-}
-
-func Test_FileExists(t *testing.T) {
-	type fileExistsTest struct {
-		path     string
-		want     bool
-		teardown helpers.TearDown
-	}
-
-	tests := []func() *fileExistsTest{
-		func() *fileExistsTest {
-			file := helpers.TempFile(t, "", []byte{})
-
-			return &fileExistsTest{
-				path:     file,
-				want:     true,
-				teardown: helpers.DeleteFile(t, file),
-			}
-		},
-		func() *fileExistsTest {
-			dir := helpers.TempDir(t)
-
-			return &fileExistsTest{
-				path:     dir,
-				want:     false,
-				teardown: helpers.DeleteDir(t, dir),
-			}
-		},
-		func() *fileExistsTest {
-			return &fileExistsTest{
-				path:     "",
-				want:     false,
-				teardown: helpers.NoopTeardown(),
-			}
-		},
-		func() *fileExistsTest {
-			return &fileExistsTest{
-				path:     ".",
-				want:     false,
-				teardown: helpers.NoopTeardown(),
-			}
-		},
-	}
-
-	for _, fn := range tests {
-		tt := fn()
-
-		actual := FileExists(tt.path)
-
-		assert.Equal(t, tt.want, actual, "FileExists() returned %+v, want %+v", actual, tt.want)
-
-		tt.teardown()
+	if err != nil {
+		assert.FailNow(t, "failed to set write flag", err)
 	}
 }
 
-func Test_IsHiddenFile(t *testing.T) {
-	type isHiddenFileTest struct {
-		path          string
-		want          bool
-		errorExpected bool
-		teardown      helpers.TearDown
-	}
+func TestFileExists(t *testing.T) {
+	t.Run("empty file", func(t *testing.T) {
+		file := helpers.TempFile(t, "", []byte{})
+		defer helpers.DeleteFile(t, file)
 
-	tests := []func() *isHiddenFileTest{
-		func() *isHiddenFileTest {
-			return &isHiddenFileTest{
-				path:          "",
-				want:          false,
-				errorExpected: false,
-				teardown:      helpers.NoopTeardown(),
-			}
-		},
-		func() *isHiddenFileTest {
-			return &isHiddenFileTest{
-				path:          ".",
-				want:          false,
-				errorExpected: false,
-				teardown:      helpers.NoopTeardown(),
-			}
-		},
-		func() *isHiddenFileTest {
-			return &isHiddenFileTest{
-				path:          "fake file",
-				want:          false,
-				errorExpected: false,
-				teardown:      helpers.NoopTeardown(),
-			}
-		},
-		func() *isHiddenFileTest {
-			file := helpers.TempFile(t, "", []byte{})
+		got := FileExists(file)
 
-			return &isHiddenFileTest{
-				path:          file,
-				want:          false,
-				errorExpected: false,
-				teardown:      helpers.DeleteFile(t, file),
-			}
-		},
-		func() *isHiddenFileTest {
-			file, err := HideFile(helpers.TempFile(t, "", []byte{}))
-			assert.NoError(t, err)
+		assert.True(t, got)
+	})
+	t.Run("directory", func(t *testing.T) {
+		dir := helpers.TempDir(t)
+		defer helpers.DeleteDir(t, dir)
 
-			return &isHiddenFileTest{
-				path:          file,
-				want:          true,
-				errorExpected: false,
-				teardown:      helpers.DeleteFile(t, file),
-			}
-		},
-	}
+		got := FileExists(dir)
 
-	for _, fn := range tests {
-		tt := fn()
+		assert.False(t, got)
+	})
+	t.Run("empty string", func(t *testing.T) {
+		got := FileExists("")
 
-		hidden, err := IsHiddenFile(tt.path)
+		assert.False(t, got)
+	})
+	t.Run("current dir", func(t *testing.T) {
+		got := FileExists(".")
 
-		if tt.errorExpected {
-			assert.Error(t, err)
-		} else {
-			assert.NoError(t, err)
-			assert.Equal(t, tt.want, hidden)
+		assert.False(t, got)
+	})
+}
+
+func TestIsHiddenFile(t *testing.T) {
+	t.Run("empty string", func(t *testing.T) {
+		hidden, err := IsHiddenFile("")
+
+		assert.NoError(t, err)
+		assert.False(t, hidden)
+	})
+	t.Run("current dir", func(t *testing.T) {
+		hidden, err := IsHiddenFile(".")
+
+		assert.NoError(t, err)
+		assert.False(t, hidden)
+	})
+	t.Run("not existing file", func(t *testing.T) {
+		hidden, err := IsHiddenFile("fake file")
+
+		assert.NoError(t, err)
+		assert.False(t, hidden)
+	})
+	t.Run("not hidden file", func(t *testing.T) {
+		file := helpers.TempFile(t, "", []byte{})
+		defer helpers.DeleteFile(t, file)
+
+		hidden, err := IsHiddenFile(file)
+
+		assert.NoError(t, err)
+		assert.False(t, hidden)
+	})
+	t.Run("hidden file", func(t *testing.T) {
+		file, err := HideFile(helpers.TempFile(t, "", []byte{}))
+		if err != nil {
+			assert.FailNow(t, "failed to hide file", err)
 		}
 
-		tt.teardown()
-	}
+		hidden, err := IsHiddenFile(file)
+
+		assert.NoError(t, err)
+		assert.True(t, hidden)
+	})
 }
 
-func Test_WriteToHiddenFile(t *testing.T) {
-	type writeToHiddenFileTest struct {
-		path          string
-		data          []byte
-		perm          os.FileMode
-		errorExpected bool
-		teardown      helpers.TearDown
-	}
+func TestWriteToHiddenFile(t *testing.T) {
+	dir := helpers.TempDir(t)
+	defer helpers.DeleteDir(t, dir)
 
-	tests := []func() *writeToHiddenFileTest{
-		func() *writeToHiddenFileTest {
-			dir := helpers.TempDir(t)
-			file := filepath.Join(dir, ".test")
+	t.Run("write to new file", func(t *testing.T) {
+		file := filepath.Join(dir, ".test")
+		defer helpers.DeleteFile(t, file)
 
-			return &writeToHiddenFileTest{
-				path:          file,
-				data:          []byte("hello world"),
-				perm:          os.FileMode(0666),
-				errorExpected: false,
-				teardown:      helpers.DeleteDir(t, dir),
-			}
-		},
-		func() *writeToHiddenFileTest {
-			file, err := HideFile(helpers.TempFile(t, "", []byte{}))
-			assert.NoError(t, err)
+		err := WriteToHiddenFile(file, []byte("hello world"), os.FileMode(0666))
 
-			return &writeToHiddenFileTest{
-				path:          file,
-				data:          []byte("hello world"),
-				perm:          os.FileMode(0666),
-				errorExpected: false,
-				teardown:      helpers.DeleteFile(t, file),
-			}
-		},
-		func() *writeToHiddenFileTest {
-			file, err := HideFile(helpers.TempFile(t, "", []byte{}))
-			assert.NoError(t, err)
-
-			return &writeToHiddenFileTest{
-				path:          file,
-				data:          []byte{},
-				perm:          os.FileMode(0666),
-				errorExpected: false,
-				teardown:      helpers.DeleteFile(t, file),
-			}
-		},
-		func() *writeToHiddenFileTest {
-			file, err := HideFile(helpers.TempFile(t, "", []byte{}))
-			assert.NoError(t, err)
-			setFileReadOnly(t, file)
-
-			return &writeToHiddenFileTest{
-				path:          file,
-				data:          []byte("i should not be there"),
-				perm:          os.FileMode(0666),
-				errorExpected: true,
-				teardown: func() {
-					setFileWriteable(t, file)
-					helpers.DeleteFile(t, file)()
-				},
-			}
-		},
-		func() *writeToHiddenFileTest {
-			file, err := HideFile(helpers.TempFile(t, "", []byte("old content")))
-			assert.NoError(t, err)
-
-			return &writeToHiddenFileTest{
-				path:          file,
-				data:          []byte("new content"),
-				perm:          os.FileMode(0666),
-				errorExpected: false,
-				teardown:      helpers.DeleteFile(t, file),
-			}
-		},
-	}
-
-	for _, fn := range tests {
-		tt := fn()
-
-		err := WriteToHiddenFile(tt.path, tt.data, tt.perm)
-
-		if tt.errorExpected {
-			assert.Error(t, err, "WriteToHiddenFile() returned no error")
-		} else {
-			assert.NoError(t, err, "WriteToHiddenFile() returned error %+v", err)
-			hidden, err := IsHiddenFile(tt.path)
-			assert.NoError(t, err)
-			assert.True(t, hidden)
-			actualBody, err := os.ReadFile(tt.path)
-			assert.NoError(t, err, "failed to read in temporary file %s", tt.path)
-			assert.Equal(t, tt.data, actualBody, "WriteToHiddenFile() file content wrong")
+		assert.NoError(t, err)
+	})
+	t.Run("write to existing, hidden file", func(t *testing.T) {
+		f := helpers.TempFile(t, dir, []byte{})
+		defer helpers.DeleteFile(t, f)
+		file, err := HideFile(f)
+		if err != nil {
+			assert.FailNow(t, "failed to hide existing file", err)
 		}
 
-		_ = os.Remove(tt.path)
-	}
+		err = WriteToHiddenFile(file, []byte("hello world"), os.FileMode(0666))
+
+		assert.NoError(t, err)
+	})
+	t.Run("overwrite existing content", func(t *testing.T) {
+		f := helpers.TempFile(t, dir, []byte("old content"))
+		defer helpers.DeleteFile(t, f)
+		file, err := HideFile(f)
+		if err != nil {
+			assert.FailNow(t, "failed to hide existing file", err)
+		}
+
+		err = WriteToHiddenFile(file, []byte("new content"), os.FileMode(0666))
+
+		assert.NoError(t, err)
+		content, err := os.ReadFile(file)
+		assert.NoError(t, err)
+		assert.Equal(t, []byte("new content"), content)
+	})
+	t.Run("try to write to read only file", func(t *testing.T) {
+		f := helpers.TempFile(t, "", []byte{})
+		defer helpers.DeleteFile(t, f)
+		file, err := HideFile(f)
+		if err != nil {
+			assert.FailNow(t, "failed to hide existing file", err)
+		}
+		setFileReadOnly(t, file)
+		defer setFileWriteable(t, file)
+
+		err = WriteToHiddenFile(file, []byte("i should not be there"), os.FileMode(0666))
+
+		assert.Error(t, err)
+	})
 }
 
-func Test_Unzip(t *testing.T) {
-	type unzipTest struct {
-		src           string
-		dest          string
-		errorExpected bool
-		files         []string
-		teardown      helpers.TearDown
-	}
+func TestUnzip(t *testing.T) {
+	t.Run("not existing src", func(t *testing.T) {
+		_, err := Unzip("not-existing", ".")
 
-	tests := []func() *unzipTest{
-		func() *unzipTest {
-			return &unzipTest{
-				src:           "not-existing",
-				dest:          "",
-				errorExpected: true,
-				files:         []string{},
-				teardown:      helpers.NoopTeardown(),
-			}
-		},
-		func() *unzipTest {
-			return &unzipTest{
-				src:           ".",
-				dest:          "",
-				errorExpected: true,
-				files:         []string{},
-				teardown:      helpers.NoopTeardown(),
-			}
-		},
-		func() *unzipTest {
-			dest := helpers.TempDir(t)
+		assert.Error(t, err)
+	})
+	t.Run("current dir src", func(t *testing.T) {
+		_, err := Unzip(".", ".")
 
-			return &unzipTest{
-				src:           filepath.Join("tests", "archive1.zip"),
-				dest:          dest,
-				errorExpected: false,
-				files: []string{
-					filepath.Join(dest, "a.txt"),
-					filepath.Join(dest, "b.txt"),
-					filepath.Join(dest, "c.txt"),
-				},
-				teardown: helpers.DeleteDir(t, dest),
-			}
-		},
-		func() *unzipTest {
-			dest := helpers.TempDir(t)
+		assert.Error(t, err)
+	})
+	t.Run("multi file archive", func(t *testing.T) {
+		dest := helpers.TempDir(t)
+		defer helpers.DeleteDir(t, dest)
 
-			return &unzipTest{
-				src:           filepath.Join("tests", "archive2.zip"),
-				dest:          dest,
-				errorExpected: false,
-				files: []string{
-					filepath.Join(dest, "a.txt"),
-				},
-				teardown: helpers.DeleteDir(t, dest),
-			}
-		},
-		func() *unzipTest {
-			dest := helpers.TempDir(t)
+		got, err := Unzip(filepath.Join("tests", "archive1.zip"), dest)
 
-			return &unzipTest{
-				src:           filepath.Join("tests", "archive3.zip"),
-				dest:          dest,
-				errorExpected: false,
-				files:         nil,
-				teardown:      helpers.DeleteDir(t, dest),
-			}
-		},
-		func() *unzipTest {
-			return &unzipTest{
-				src:           filepath.Join("tests", "archive4.zip"),
-				dest:          "",
-				errorExpected: true,
-				files:         []string{},
-				teardown:      helpers.NoopTeardown(),
-			}
-		},
-	}
-
-	for _, fn := range tests {
-		tt := fn()
-
-		actual, err := Unzip(tt.src, tt.dest)
-
-		if tt.errorExpected {
-			assert.Error(t, err)
-		} else {
-			assert.NoError(t, err)
-			assert.Equal(t, tt.files, actual)
+		assert.NoError(t, err)
+		want := []string{
+			filepath.Join(dest, "a.txt"),
+			filepath.Join(dest, "b.txt"),
+			filepath.Join(dest, "c.txt"),
 		}
+		assert.Equal(t, want, got)
+	})
+	t.Run("single file archive", func(t *testing.T) {
+		dest := helpers.TempDir(t)
+		defer helpers.DeleteDir(t, dest)
 
-		tt.teardown()
-	}
+		got, err := Unzip(filepath.Join("tests", "archive2.zip"), dest)
+
+		assert.NoError(t, err)
+		want := []string{
+			filepath.Join(dest, "a.txt"),
+		}
+		assert.Equal(t, want, got)
+	})
+	t.Run("empty archive", func(t *testing.T) {
+		dest := helpers.TempDir(t)
+		defer helpers.DeleteDir(t, dest)
+
+		got, err := Unzip(filepath.Join("tests", "archive3.zip"), dest)
+
+		assert.NoError(t, err)
+		assert.Equal(t, []string{}, got)
+	})
+	t.Run("invalid zip file", func(t *testing.T) {
+		dest := helpers.TempDir(t)
+		defer helpers.DeleteDir(t, dest)
+
+		_, err := Unzip(filepath.Join("tests", "archive4.zip"), dest)
+
+		assert.Error(t, err)
+	})
 }

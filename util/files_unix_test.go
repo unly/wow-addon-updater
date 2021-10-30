@@ -1,4 +1,4 @@
-// +build !windows
+//go:build !windows
 
 package util
 
@@ -11,87 +11,53 @@ import (
 	"github.com/unly/wow-addon-updater/util/tests/helpers"
 )
 
-func Test_HideFile(t *testing.T) {
-	type hideFileTest struct {
-		path          string
-		returnedPath  string
-		errorExpected bool
-		teardown      helpers.TearDown
-	}
-
-	tests := []func() *hideFileTest{
-		func() *hideFileTest {
-			dir := helpers.TempDir(t)
-			f := filepath.Join(dir, "test1")
-			err := os.WriteFile(f, []byte{}, os.FileMode(0666))
-			assert.NoError(t, err)
-
-			return &hideFileTest{
-				path:          f,
-				returnedPath:  filepath.Join(dir, ".test1"),
-				errorExpected: false,
-				teardown:      helpers.DeleteDir(t, dir),
-			}
-		},
-		func() *hideFileTest {
-			dir := helpers.TempDir(t)
-			f := filepath.Join(dir, ".test2")
-			err := os.WriteFile(f, []byte{}, os.FileMode(0666))
-			assert.NoError(t, err)
-
-			return &hideFileTest{
-				path:          f,
-				returnedPath:  filepath.Join(dir, ".test2"),
-				errorExpected: false,
-				teardown:      helpers.DeleteDir(t, dir),
-			}
-		},
-		func() *hideFileTest {
-			return &hideFileTest{
-				path:          "",
-				returnedPath:  "",
-				errorExpected: true,
-				teardown:      helpers.NoopTeardown(),
-			}
-		},
-		func() *hideFileTest {
-			return &hideFileTest{
-				path:          ".",
-				returnedPath:  "",
-				errorExpected: true,
-				teardown:      helpers.NoopTeardown(),
-			}
-		},
-		func() *hideFileTest {
-			return &hideFileTest{
-				path:          "fake.file",
-				returnedPath:  "",
-				errorExpected: true,
-				teardown:      helpers.NoopTeardown(),
-			}
-		},
-	}
-
-	for _, fn := range tests {
-		tt := fn()
-
-		actual, err := HideFile(tt.path)
-
-		if tt.errorExpected {
-			assert.Error(t, err)
-		} else {
-			assert.NoError(t, err)
-			assert.Equal(t, tt.returnedPath, actual)
-			hidden, err := IsHiddenFile(actual)
-			assert.NoError(t, err)
-			assert.True(t, hidden)
+func TestHideFile(t *testing.T) {
+	t.Run("hide sample file", func(t *testing.T) {
+		dir := helpers.TempDir(t)
+		defer helpers.DeleteDir(t, dir)
+		f := filepath.Join(dir, "test1")
+		err := os.WriteFile(f, []byte{}, os.FileMode(0666))
+		if err != nil {
+			assert.FailNow(t, "failed to write to test file", err)
 		}
 
-		tt.teardown()
-	}
+		path, err := HideFile(f)
+
+		assert.NoError(t, err)
+		assert.Equal(t, filepath.Join(dir, ".test1"), path)
+	})
+	t.Run("hide already hidden file", func(t *testing.T) {
+		dir := helpers.TempDir(t)
+		defer helpers.DeleteDir(t, dir)
+		f := filepath.Join(dir, ".test2")
+		err := os.WriteFile(f, []byte{}, os.FileMode(0666))
+		if err != nil {
+			assert.FailNow(t, "failed to write to test file", err)
+		}
+
+		path, err := HideFile(f)
+
+		assert.NoError(t, err)
+		assert.Equal(t, filepath.Join(dir, ".test2"), path)
+	})
+	t.Run("empty path", func(t *testing.T) {
+		_, err := HideFile("")
+
+		assert.Error(t, err)
+	})
+	t.Run("current dir", func(t *testing.T) {
+		_, err := HideFile(".")
+
+		assert.Error(t, err)
+	})
+	t.Run("not existing file", func(t *testing.T) {
+		_, err := HideFile("fake.file")
+
+		assert.Error(t, err)
+	})
 }
 
-func Test_IsHiddenFilePath(t *testing.T) {
+func TestIsHiddenFilePath(t *testing.T) {
 	tests := []struct {
 		path string
 		want bool
@@ -128,7 +94,7 @@ func Test_IsHiddenFilePath(t *testing.T) {
 	}
 }
 
-func Test_WriteToHiddenFile_Unix(t *testing.T) {
+func TestWriteToHiddenFile_Unix(t *testing.T) {
 	err := WriteToHiddenFile("dir/test.file", []byte("hello world"), os.FileMode(0666))
 	assert.Error(t, err, "WriteToHiddenFile() returned no error")
 }
