@@ -2,14 +2,15 @@ package updater
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"regexp"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/unly/wow-addon-updater/config"
 	"github.com/unly/wow-addon-updater/util"
-
-	"gopkg.in/yaml.v3"
 )
 
 // Updater is the main struct to update all addons for both
@@ -30,6 +31,8 @@ type gameUpdater struct {
 
 // UpdateSource can be a possible source to get WoW addons from
 type UpdateSource interface {
+	io.Closer
+
 	// GetURLRegex returns a regular expression that matches a URL the source can handle
 	GetURLRegex() *regexp.Regexp
 	// GetLatestVersion returns the latest version for the given addon URL
@@ -37,8 +40,6 @@ type UpdateSource interface {
 	GetLatestVersion(addonURL string) (string, error)
 	// DownloadAddon downloads and extracts the addon to the given directory
 	DownloadAddon(addonURL, dir string) error
-	// Close shuts down the sources to the respective addon sources and cleans up temp directories
-	Close()
 }
 
 type addon struct {

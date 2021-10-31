@@ -1,7 +1,6 @@
-package sources
+package github
 
 import (
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -11,32 +10,38 @@ import (
 	"github.com/google/go-github/v38/github"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/unly/wow-addon-updater/updater/sources/mocks"
+
+	"github.com/unly/wow-addon-updater/updater/sources/github/mocks"
 	"github.com/unly/wow-addon-updater/util/tests/helpers"
 )
 
+func newGitHubSource(t *testing.T, client *http.Client) *githubSource {
+	t.Helper()
+	ghSource, err := New(client)
+	if err != nil {
+		t.FailNow()
+	}
+
+	source, ok := ghSource.(*githubSource)
+	if !ok {
+		t.FailNow()
+	}
+
+	return source
+}
+
 func Test_getGetLatestRelease(t *testing.T) {
 	tests := []struct {
+		name          string
 		setup         func() *githubSource
 		addonURL      string
 		want          *github.RepositoryRelease
 		errorExpected bool
 	}{
 		{
+			name: "bad request",
 			setup: func() *githubSource {
-				source := newGitHubSource()
-				m := &mocks.MockGitHubAPI{}
-				m.On("GetLatestRelease", mock.Anything, "owner", "addon").Return(nil, nil, errors.New("i'm an error"))
-				source.api = m
-				return source
-			},
-			addonURL:      "https://github.com/owner/addon",
-			want:          nil,
-			errorExpected: true,
-		},
-		{
-			setup: func() *githubSource {
-				source := newGitHubSource()
+				source := newGitHubSource(t, nil)
 				m := &mocks.MockGitHubAPI{}
 				resp := &github.Response{
 					Response: &http.Response{
@@ -52,8 +57,9 @@ func Test_getGetLatestRelease(t *testing.T) {
 			errorExpected: true,
 		},
 		{
+			name: "internal server error",
 			setup: func() *githubSource {
-				source := newGitHubSource()
+				source := newGitHubSource(t, nil)
 				m := &mocks.MockGitHubAPI{}
 				resp := &github.Response{
 					Response: &http.Response{
@@ -69,8 +75,9 @@ func Test_getGetLatestRelease(t *testing.T) {
 			errorExpected: true,
 		},
 		{
+			name: "successful api call",
 			setup: func() *githubSource {
-				source := newGitHubSource()
+				source := newGitHubSource(t, nil)
 				m := &mocks.MockGitHubAPI{}
 				resp := &github.Response{
 					Response: &http.Response{
@@ -93,75 +100,72 @@ func Test_getGetLatestRelease(t *testing.T) {
 			errorExpected: false,
 		},
 		{
-			setup:         newGitHubSource,
+			name: "invalid url",
+			setup: func() *githubSource {
+				return newGitHubSource(t, nil)
+			},
 			addonURL:      "https://github.com/owner",
 			want:          nil,
 			errorExpected: true,
 		},
 		{
-			setup:         newGitHubSource,
+			name: "empty url",
+			setup: func() *githubSource {
+				return newGitHubSource(t, nil)
+			},
 			addonURL:      "",
-			want:          nil,
-			errorExpected: true,
-		},
-		{
-			setup:         newGitHubSource,
-			addonURL:      "https://example.com/owner/addon",
 			want:          nil,
 			errorExpected: true,
 		},
 	}
 
 	for _, tt := range tests {
-		source := tt.setup()
-		_, err := source.getLatestRelease(tt.addonURL)
+		t.Run(tt.name, func(t *testing.T) {
+			source := tt.setup()
+			defer source.Close()
+			_, err := source.getLatestRelease(tt.addonURL)
 
-		if tt.errorExpected {
-			assert.Error(t, err)
-		} else {
-			assert.NoError(t, err)
-		}
+			if tt.errorExpected {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
 	}
 }
 
 func Test_getOrgAndRepository(t *testing.T) {
 	tests := []struct {
-		setup         func() *githubSource
 		addonURL      string
 		wantOwner     string
 		wantRepo      string
 		errorExpected bool
 	}{
 		{
-			setup:         newGitHubSource,
 			addonURL:      "",
 			wantOwner:     "",
 			wantRepo:      "",
 			errorExpected: true,
 		},
 		{
-			setup:         newGitHubSource,
 			addonURL:      "github.com/owner",
 			wantOwner:     "",
 			wantRepo:      "",
 			errorExpected: true,
 		},
 		{
-			setup:         newGitHubSource,
 			addonURL:      "github.com/owner/addon",
 			wantOwner:     "owner",
 			wantRepo:      "addon",
 			errorExpected: false,
 		},
 		{
-			setup:         newGitHubSource,
 			addonURL:      "github.com/owner/addon/",
 			wantOwner:     "owner",
 			wantRepo:      "addon",
 			errorExpected: false,
 		},
 		{
-			setup:         newGitHubSource,
 			addonURL:      "github.com/owner-1/addon",
 			wantOwner:     "owner-1",
 			wantRepo:      "addon",
@@ -170,35 +174,43 @@ func Test_getOrgAndRepository(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		source := tt.setup()
-		actualOwner, actualRepo, err := source.getOrgAndRepository(tt.addonURL)
+		t.Run(tt.addonURL, func(t *testing.T) {
+			source := newGitHubSource(t, nil)
+			defer source.Close()
+			actualOwner, actualRepo, err := source.getOrgAndRepository(tt.addonURL)
 
-		if tt.errorExpected {
-			assert.Error(t, err)
-		} else {
-			assert.NoError(t, err)
-			assert.Equal(t, tt.wantOwner, actualOwner)
-			assert.Equal(t, tt.wantRepo, actualRepo)
-		}
+			if tt.errorExpected {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.wantOwner, actualOwner)
+				assert.Equal(t, tt.wantRepo, actualRepo)
+			}
+		})
 	}
 }
 
 func Test_GetLatestVersion(t *testing.T) {
 	tests := []struct {
+		name          string
 		setup         func() *githubSource
 		addonURL      string
 		version       string
 		errorExpected bool
 	}{
 		{
-			setup:         newGitHubSource,
+			name: "invalid url",
+			setup: func() *githubSource {
+				return newGitHubSource(t, nil)
+			},
 			addonURL:      "github.com/owner",
 			version:       "",
 			errorExpected: true,
 		},
 		{
+			name: "successful api call",
 			setup: func() *githubSource {
-				source := newGitHubSource()
+				source := newGitHubSource(t, nil)
 				m := &mocks.MockGitHubAPI{}
 				resp := &github.Response{
 					Response: &http.Response{
@@ -217,8 +229,9 @@ func Test_GetLatestVersion(t *testing.T) {
 			errorExpected: false,
 		},
 		{
+			name: "missing version",
 			setup: func() *githubSource {
-				source := newGitHubSource()
+				source := newGitHubSource(t, nil)
 				m := &mocks.MockGitHubAPI{}
 				resp := &github.Response{
 					Response: &http.Response{
@@ -237,20 +250,24 @@ func Test_GetLatestVersion(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		source := tt.setup()
-		actual, err := source.GetLatestVersion(tt.addonURL)
+		t.Run(tt.name, func(t *testing.T) {
+			source := tt.setup()
+			defer source.Close()
+			actual, err := source.GetLatestVersion(tt.addonURL)
 
-		if tt.errorExpected {
-			assert.Error(t, err)
-		} else {
-			assert.NoError(t, err)
-			assert.Equal(t, tt.version, actual)
-		}
+			if tt.errorExpected {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.version, actual)
+			}
+		})
 	}
 }
 
 func Test_GetURLRegex(t *testing.T) {
-	source := newGitHubSource()
+	source := newGitHubSource(t, nil)
+	defer source.Close()
 
 	tests := []struct {
 		addonURL string
@@ -283,10 +300,12 @@ func Test_GetURLRegex(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		regex := source.GetURLRegex()
-		actual := regex.MatchString(tt.addonURL)
+		t.Run(tt.addonURL, func(t *testing.T) {
+			regex := source.GetURLRegex()
+			actual := regex.MatchString(tt.addonURL)
 
-		assert.Equal(t, tt.want, actual)
+			assert.Equal(t, tt.want, actual)
+		})
 	}
 }
 
@@ -304,7 +323,7 @@ func Test_DownloadAddon(t *testing.T) {
 	}{
 		{
 			setup: func() testStruct {
-				source := newGitHubSource()
+				source := newGitHubSource(t, nil)
 				m := &mocks.MockGitHubAPI{}
 				resp := &github.Response{
 					Response: &http.Response{
@@ -319,7 +338,9 @@ func Test_DownloadAddon(t *testing.T) {
 					addonURL:      "github.com/owner/addon",
 					outputDir:     "",
 					errorExpected: true,
-					teardown:      helpers.DeleteDir(t, source.tempDir),
+					teardown: func() {
+						_ = source.Close()
+					},
 				}
 			},
 		},
@@ -328,7 +349,7 @@ func Test_DownloadAddon(t *testing.T) {
 				mux := http.NewServeMux()
 				server := httptest.NewServer(mux)
 
-				source := newGitHubSource()
+				source := newGitHubSource(t, nil)
 				m := &mocks.MockGitHubAPI{}
 				resp := &github.Response{
 					Response: &http.Response{
@@ -352,7 +373,7 @@ func Test_DownloadAddon(t *testing.T) {
 				teardown := func() {
 					server.Close()
 					helpers.DeleteDir(t, dir)()
-					helpers.DeleteDir(t, source.tempDir)()
+					_ = source.Close()
 				}
 
 				return testStruct{
@@ -369,7 +390,7 @@ func Test_DownloadAddon(t *testing.T) {
 				mux := http.NewServeMux()
 				server := httptest.NewServer(mux)
 
-				source := newGitHubSource()
+				source := newGitHubSource(t, nil)
 				m := &mocks.MockGitHubAPI{}
 				resp := &github.Response{
 					Response: &http.Response{
@@ -396,7 +417,7 @@ func Test_DownloadAddon(t *testing.T) {
 				teardown := func() {
 					server.Close()
 					helpers.DeleteDir(t, dir)()
-					helpers.DeleteDir(t, source.tempDir)()
+					_ = source.Close()
 				}
 
 				return testStruct{
@@ -413,7 +434,7 @@ func Test_DownloadAddon(t *testing.T) {
 				mux := http.NewServeMux()
 				server := httptest.NewServer(mux)
 
-				source := newGitHubSource()
+				source := newGitHubSource(t, nil)
 				m := &mocks.MockGitHubAPI{}
 				resp := &github.Response{
 					Response: &http.Response{
@@ -437,7 +458,7 @@ func Test_DownloadAddon(t *testing.T) {
 				teardown := func() {
 					server.Close()
 					helpers.DeleteDir(t, dir)()
-					helpers.DeleteDir(t, source.tempDir)()
+					_ = source.Close()
 				}
 
 				return testStruct{
@@ -454,7 +475,7 @@ func Test_DownloadAddon(t *testing.T) {
 				mux := http.NewServeMux()
 				server := httptest.NewServer(mux)
 
-				source := newGitHubSource()
+				source := newGitHubSource(t, nil)
 				m := &mocks.MockGitHubAPI{}
 				resp := &github.Response{
 					Response: &http.Response{
@@ -484,7 +505,7 @@ func Test_DownloadAddon(t *testing.T) {
 				teardown := func() {
 					server.Close()
 					helpers.DeleteDir(t, dir)()
-					helpers.DeleteDir(t, source.tempDir)()
+					_ = source.Close()
 				}
 
 				return testStruct{
@@ -501,7 +522,7 @@ func Test_DownloadAddon(t *testing.T) {
 				mux := http.NewServeMux()
 				server := httptest.NewServer(mux)
 
-				source := newGitHubSource()
+				source := newGitHubSource(t, nil)
 				m := &mocks.MockGitHubAPI{}
 				resp := &github.Response{
 					Response: &http.Response{
@@ -523,10 +544,9 @@ func Test_DownloadAddon(t *testing.T) {
 
 				mux.HandleFunc("/download/addon", func(w http.ResponseWriter, r *http.Request) {
 					assert.Equal(t, http.MethodGet, r.Method)
-					content, err := os.ReadFile(filepath.Join("_tests", "archive1.zip"))
+					content, err := os.ReadFile(filepath.Join("..", "_tests", "archive1.zip"))
 					assert.NoError(t, err)
-					w.Write(content)
-					w.WriteHeader(http.StatusOK)
+					_, _ = w.Write(content)
 				})
 
 				dir := helpers.TempDir(t)
@@ -534,7 +554,7 @@ func Test_DownloadAddon(t *testing.T) {
 				teardown := func() {
 					server.Close()
 					helpers.DeleteDir(t, dir)()
-					helpers.DeleteDir(t, source.tempDir)()
+					_ = source.Close()
 				}
 
 				return testStruct{
@@ -551,7 +571,7 @@ func Test_DownloadAddon(t *testing.T) {
 				mux := http.NewServeMux()
 				server := httptest.NewServer(mux)
 
-				source := newGitHubSource()
+				source := newGitHubSource(t, nil)
 				m := &mocks.MockGitHubAPI{}
 				resp := &github.Response{
 					Response: &http.Response{
@@ -575,7 +595,7 @@ func Test_DownloadAddon(t *testing.T) {
 				teardown := func() {
 					server.Close()
 					helpers.DeleteDir(t, dir)()
-					helpers.DeleteDir(t, source.tempDir)()
+					_ = source.Close()
 				}
 
 				return testStruct{

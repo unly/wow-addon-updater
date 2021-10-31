@@ -61,5 +61,6 @@
 
 # End of https://www.toptal.com/developers/gitignore/api/go,visualstudiocode,linux,git
 
+.idea
 .versions
 config.yaml

@@ -1,22 +1,24 @@
-package sources
+package tukui
 
 import (
+	"errors"
 	"fmt"
+	"net/http"
 	"regexp"
 	"strings"
 
 	"github.com/unly/go-tukui"
+
 	"github.com/unly/wow-addon-updater/updater"
+	"github.com/unly/wow-addon-updater/updater/sources"
 	"github.com/unly/wow-addon-updater/util"
 )
 
-type tukUISource struct {
-	*source
-	classic tukuiAPI
-	retail  tukuiAPI
-	idRegex *regexp.Regexp
-	uiRegex *regexp.Regexp
-}
+var (
+	regex   = regexp.MustCompile(`^(https?://)?(www\.)?tukui\.org/((classic-(tbc-)?)?addons\.php\?id=[0-9]+)|(download\.php\?ui=(tukui|elvui))$`)
+	idRegex = regexp.MustCompile(`id=[0-9]+`)
+	uiRegex = regexp.MustCompile(`ui=.+`)
+)
 
 //go:generate go run github.com/vektra/mockery/v2 --case=underscore  --name=tukuiAPI --structname=MockTukUIAPI
 
@@ -24,21 +26,35 @@ type tukuiAPI interface {
 	tukui.AddonClient
 }
 
-// NewTukUISource returns a pointer to a newly created TukUISource.
-func NewTukUISource() updater.UpdateSource {
-	return newTukUISource()
+type tukUISource struct {
+	downloader sources.Downloader
+	client     *http.Client
+	classic    tukuiAPI
+	retail     tukuiAPI
 }
 
-func newTukUISource() *tukUISource {
-	client := tukui.NewClient(nil)
+// New returns a pointer to a newly created TukUISource.
+func New(client *http.Client) (updater.UpdateSource, error) {
+	if client == nil {
+		client = http.DefaultClient
+	}
+	d, err := sources.NewDownloader(client)
+	if err != nil {
+		return nil, err
+	}
+
+	tukClient := tukui.NewClient(client)
 
 	return &tukUISource{
-		source:  newSource(regexp.MustCompile(`^(https?://)?(www\.)?tukui\.org/((classic-(tbc-)?)?addons\.php\?id=[0-9]+)|(download\.php\?ui=(tukui|elvui))$`)),
-		classic: client.ClassicAddons,
-		retail:  client.RetailAddons,
-		idRegex: regexp.MustCompile(`id=[0-9]+`),
-		uiRegex: regexp.MustCompile(`ui=.+`),
-	}
+		downloader: d,
+		client:     client,
+		classic:    tukClient.ClassicAddons,
+		retail:     tukClient.RetailAddons,
+	}, nil
+}
+
+func (tukUISource) GetURLRegex() *regexp.Regexp {
+	return regex
 }
 
 // GetLatestVersion returns the latest version for the given addon URL
@@ -50,7 +66,7 @@ func (t *tukUISource) GetLatestVersion(addonURL string) (string, error) {
 
 	version := tukuiAddon.Version
 	if version == nil {
-		return "", fmt.Errorf("the api response did not contain a version")
+		return "", errors.New("the api response did not contain a version")
 	}
 
 	return *version, nil
@@ -58,12 +74,12 @@ func (t *tukUISource) GetLatestVersion(addonURL string) (string, error) {
 
 func (t *tukUISource) getAddon(url string) (tukui.Addon, error) {
 	// regular addon parameter queries
-	if t.idRegex.FindString(url) != "" {
+	if idRegex.FindString(url) != "" {
 		return t.getRegularAddon(url)
 	}
 
 	// tukui and elvui queries
-	if t.uiRegex.FindString(url) != "" {
+	if uiRegex.FindString(url) != "" {
 		return t.getUIAddon(url)
 	}
 
@@ -71,18 +87,18 @@ func (t *tukUISource) getAddon(url string) (tukui.Addon, error) {
 }
 
 func (t *tukUISource) getUIAddon(url string) (tukui.Addon, error) {
-	uiRunes := []rune(t.uiRegex.FindString(url))
+	uiRunes := []rune(uiRegex.FindString(url))
 	if len(uiRunes) < 3 {
 		return tukui.Addon{}, fmt.Errorf("failed to extract the ui= parameter from %s. no ui found", url)
 	}
 
 	switch string(uiRunes[3:]) {
 	case "tukui":
-		tukui, resp, err := t.retail.GetTukUI()
-		return tukui, checkHTTPResponse(resp, err)
+		ui, resp, err := t.retail.GetTukUI()
+		return ui, util.CheckHTTPResponse(resp, err)
 	case "elvui":
-		elvui, resp, err := t.retail.GetElvUI()
-		return elvui, checkHTTPResponse(resp, err)
+		ui, resp, err := t.retail.GetElvUI()
+		return ui, util.CheckHTTPResponse(resp, err)
 	default:
 		return tukui.Addon{}, fmt.Errorf("given tukui.org ui addon link %s is not supported", url)
 	}
@@ -91,7 +107,7 @@ func (t *tukUISource) getUIAddon(url string) (tukui.Addon, error) {
 func (t *tukUISource) getRegularAddon(url string) (tukui.Addon, error) {
 	addon := tukui.Addon{}
 
-	doc, err := getHTMLPage(url)
+	doc, err := util.GetHTMLPage(t.client, url)
 	if err != nil {
 		return addon, err
 	}
@@ -118,18 +134,18 @@ func (t *tukUISource) DownloadAddon(addonURL, dir string) error {
 
 	url := tukuiAddon.URL
 	if url == nil {
-		return fmt.Errorf("the api response did not contain a download url")
+		return errors.New("the api response did not contain a download url")
 	}
 
-	zipPath, err := t.downloadZip(*url)
+	zipPath, err := t.downloader.DownloadZip(*url)
 	if err != nil {
 		return err
 	}
 
 	_, err = util.Unzip(zipPath, dir)
-	if err != nil {
-		return err
-	}
+	return err
+}
 
-	return nil
+func (t *tukUISource) Close() error {
+	return t.downloader.Close()
 }

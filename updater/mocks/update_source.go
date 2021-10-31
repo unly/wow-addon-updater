@@ -14,8 +14,17 @@ type MockUpdateSource struct {
 }
 
 // Close provides a mock function with given fields:
-func (_m *MockUpdateSource) Close() {
-	_m.Called()
+func (_m *MockUpdateSource) Close() error {
+	ret := _m.Called()
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func() error); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
 // DownloadAddon provides a mock function with given fields: addonURL, dir

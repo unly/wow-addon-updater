@@ -49,7 +49,7 @@ func IsHiddenFile(path string) (bool, error) {
 
 // IsHiddenFilePath returns whether the given path could be a hidden file in the os.
 // Always true for Windows.
-func IsHiddenFilePath(path string) bool {
+func IsHiddenFilePath(_ string) bool {
 	return true
 }
 
