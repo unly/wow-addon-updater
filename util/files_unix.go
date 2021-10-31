@@ -16,13 +16,14 @@ func HideFile(path string) (string, error) {
 		return "", os.ErrNotExist
 	}
 
-	if filename := filepath.Base(path); !strings.HasPrefix(filename, ".") {
-		newPath := filepath.Join(filepath.Dir(path), "."+filename)
-
-		return newPath, os.Rename(path, newPath)
+	filename := filepath.Base(path)
+	if IsHiddenFilePath(filename) {
+		return path, nil
 	}
 
-	return path, nil
+	newPath := filepath.Join(filepath.Dir(path), "."+filename)
+
+	return newPath, os.Rename(path, newPath)
 }
 
 // WriteToHiddenFile writes the given data to a hidden file.
