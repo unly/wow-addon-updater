@@ -89,8 +89,11 @@ func TestIsHiddenFilePath(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		actual := IsHiddenFilePath(tt.path)
-		assert.Equal(t, tt.want, actual)
+		t.Run(tt.path, func(t *testing.T) {
+			actual := IsHiddenFilePath(tt.path)
+			
+			assert.Equal(t, tt.want, actual)
+		})
 	}
 }
 
