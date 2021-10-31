@@ -23,15 +23,15 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          key: ${{ runner.os }}-go
           restore-keys: |
-            ${{ runner.os }}-go-
+            ${{ runner.os }}-go
       - name: go fmt
         run: go fmt ./...
       - name: go vet
         run: go vet ./...
       - name: go test
-        run: go test -v -race -coverprofile coverage.txt -covermode atomic ./...
+        run: go test -count=10 -v -race -coverprofile coverage.txt -covermode atomic ./...
       - name: upload to codecov.io
         uses: codecov/codecov-action@v1
         with:
@@ -52,9 +52,9 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          key: ${{ runner.os }}-go
           restore-keys: |
-            ${{ runner.os }}-go-
+            ${{ runner.os }}-go
       - name: build windows binary
         run: GOOS=windows GOARCH=amd64 go build -ldflags "-s -w" -o updater.exe
       - name: upload binary
