@@ -8,11 +8,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"gopkg.in/yaml.v3"
+
 	"github.com/unly/wow-addon-updater/config"
 	"github.com/unly/wow-addon-updater/updater/mocks"
 	"github.com/unly/wow-addon-updater/util"
 	"github.com/unly/wow-addon-updater/util/tests/helpers"
-	"gopkg.in/yaml.v3"
 )
 
 func Test_readVersionsFile(t *testing.T) {

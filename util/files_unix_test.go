@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
 	"github.com/unly/wow-addon-updater/util/tests/helpers"
 )
 

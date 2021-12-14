@@ -4,11 +4,14 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 
 	"github.com/unly/wow-addon-updater/config"
 	"github.com/unly/wow-addon-updater/updater"
-	"github.com/unly/wow-addon-updater/updater/sources"
+	"github.com/unly/wow-addon-updater/updater/sources/github"
+	"github.com/unly/wow-addon-updater/updater/sources/tukui"
+	"github.com/unly/wow-addon-updater/updater/sources/wowinterface"
 	"github.com/unly/wow-addon-updater/util"
 )
 
@@ -17,17 +20,9 @@ const (
 )
 
 var (
+	addonSources = getSources()
 	versionsPath = ".versions"
-	addonSources []updater.UpdateSource
 )
-
-func init() {
-	addonSources = []updater.UpdateSource{
-		sources.NewGitHubSource(),
-		sources.NewTukUISource(),
-		sources.NewWoWInterfaceSource(),
-	}
-}
 
 func main() {
 	exitCode := 0
@@ -55,6 +50,7 @@ func runAndRecover() (err error) {
 
 func run() error {
 	defer closeSources(addonSources)
+
 	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.PanicOnError)
 	path := flag.String("c", configPath, "path to the config file")
 	flag.Parse()
@@ -98,6 +94,26 @@ func generateDefaultConfig(path string) error {
 	log.Println("see https://github.com/unly/wow-addon-updater for information")
 
 	return nil
+}
+
+func getSources() []updater.UpdateSource {
+	sources := make([]updater.UpdateSource, 0)
+	tukuiSource, err := tukui.New(new(http.Client))
+	if err != nil {
+		panic(err)
+	}
+	sources = append(sources, tukuiSource)
+	wowinterfaceSource, err := wowinterface.New(new(http.Client))
+	if err != nil {
+		panic(err)
+	}
+	sources = append(sources, wowinterfaceSource)
+	githubSource, err := github.New(new(http.Client))
+	if err != nil {
+		panic(err)
+	}
+	sources = append(sources, githubSource)
+	return sources
 }
 
 func closeSources(sources []updater.UpdateSource) {

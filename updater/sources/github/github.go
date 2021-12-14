@@ -1,17 +1,25 @@
-package sources
+package github
 
 import (
 	"context"
 	"fmt"
 	"math"
+	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/google/go-github/v38/github"
+
 	"github.com/unly/wow-addon-updater/updater"
+	"github.com/unly/wow-addon-updater/updater/sources"
 	"github.com/unly/wow-addon-updater/util"
+)
+
+var (
+	regex     = regexp.MustCompile(`^(https?://)?github\.com/([a-zA-Z0-9]|-)+/([a-zA-Z0-9]|-)+/?$`)
+	repoRegex = regexp.MustCompile(`/([a-zA-Z0-9]|-)+/([a-zA-Z0-9]|-)+`)
 )
 
 //go:generate go run github.com/vektra/mockery/v2 --case=underscore  --name=githubAPI --structname=MockGitHubAPI
@@ -21,22 +29,30 @@ type githubAPI interface {
 }
 
 type githubSource struct {
-	*source
-	api       githubAPI
-	repoRegex *regexp.Regexp
+	downloader sources.Downloader
+	client     *http.Client
+	api        githubAPI
 }
 
-// NewGitHubSource returns a pointer to a newly created GithubSource.
-func NewGitHubSource() updater.UpdateSource {
-	return newGitHubSource()
-}
-
-func newGitHubSource() *githubSource {
-	return &githubSource{
-		source:    newSource(regexp.MustCompile(`^(https?://)?github\.com/([a-zA-Z0-9]|-)+/([a-zA-Z0-9]|-)+/?$`)),
-		api:       github.NewClient(nil).Repositories,
-		repoRegex: regexp.MustCompile(`/([a-zA-Z0-9]|-)+/([a-zA-Z0-9]|-)+`),
+// New returns a pointer to a newly created GithubSource.
+func New(client *http.Client) (updater.UpdateSource, error) {
+	if client == nil {
+		client = http.DefaultClient
 	}
+	d, err := sources.NewDownloader(client)
+	if err != nil {
+		return nil, err
+	}
+
+	return &githubSource{
+		downloader: d,
+		client:     client,
+		api:        github.NewClient(client).Repositories,
+	}, nil
+}
+
+func (githubSource) GetURLRegex() *regexp.Regexp {
+	return regex
 }
 
 // GetLatestVersion returns the git tag of the latest release of the given repository URL.
@@ -70,7 +86,7 @@ func (g *githubSource) DownloadAddon(addonURL, dir string) error {
 		}
 	}
 
-	zipPath, err := g.downloadZip(url)
+	zipPath, err := g.downloader.DownloadZip(url)
 	if err != nil {
 		return err
 	}
@@ -121,7 +137,7 @@ func (g *githubSource) getLatestRelease(addonURL string) (*github.RepositoryRele
 	if err != nil {
 		return nil, err
 	}
-	if err := checkHTTPResponse(resp.Response, err); err != nil {
+	if err := util.CheckHTTPResponse(resp.Response, err); err != nil {
 		return nil, err
 	}
 
@@ -129,11 +145,15 @@ func (g *githubSource) getLatestRelease(addonURL string) (*github.RepositoryRele
 }
 
 func (g *githubSource) getOrgAndRepository(addonURL string) (string, string, error) {
-	repo := g.repoRegex.FindString(addonURL)
+	repo := repoRegex.FindString(addonURL)
 	split := strings.Split(repo, "/")
 	if len(split) != 3 || split[1] == "" || split[2] == "" {
 		return "", "", fmt.Errorf("the given url %s is invalid for a github repository", addonURL)
 	}
 
 	return split[1], split[2], nil
+}
+
+func (g *githubSource) Close() error {
+	return g.downloader.Close()
 }

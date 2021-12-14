@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+
 	"github.com/unly/wow-addon-updater/updater"
 	"github.com/unly/wow-addon-updater/updater/mocks"
 	"github.com/unly/wow-addon-updater/util"
@@ -65,9 +66,9 @@ func Test_generateDefaultConfig(t *testing.T) {
 
 func Test_closeSources(t *testing.T) {
 	m1 := new(mocks.MockUpdateSource)
-	m1.On("Close")
+	m1.On("Close").Return(nil)
 	m2 := new(mocks.MockUpdateSource)
-	m2.On("Close")
+	m2.On("Close").Return(nil)
 	addonSources = []updater.UpdateSource{
 		m1,
 		m2,
@@ -152,7 +153,7 @@ classic:
 			m.On("GetURLRegex").Return(regexp.MustCompile(`addon.+`))
 			m.On("GetLatestVersion", mock.Anything).Return("1.2.3", nil)
 			m.On("DownloadAddon", mock.Anything, mock.Anything).Return(nil)
-			m.On("Close")
+			m.On("Close").Return(nil)
 			addonSources = []updater.UpdateSource{
 				m,
 			}
